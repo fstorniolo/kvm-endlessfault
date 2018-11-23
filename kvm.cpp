@@ -10,6 +10,7 @@
 
 #include "frontend/IODevice.h"
 #include "frontend/keyboard.h"
+#include "frontend/HardDisk.h"
 #include "frontend/serial_port.h"
 #include "backend/ConsoleLog.h"
 #include "backend/ConsoleInput.h"
