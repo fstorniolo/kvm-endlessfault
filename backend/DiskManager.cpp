@@ -13,7 +13,15 @@
 using namespace std;
 
 void DiskManager::build_disk(){
-	// To do
+	uint8_t *buffer = new uint8_t[BLOCK_SIZE_BYTE];
+	// Fill the buffer with 0	
+	for(uint8_t i=0;i<BLOCK_SIZE_BYTE; i++){
+		buffer[i] = 0;
+	}
+	// Build the file disk
+	for(uint32_t i=0;i<disk_size; i++){
+		write(buffer,i);
+	}
 }
 
 DiskManager::DiskManager() : DiskManager(DEFAULT_DISK_SIZE_MB*1024*1024){};
