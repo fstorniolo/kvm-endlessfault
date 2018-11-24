@@ -1,12 +1,13 @@
 #define BLOCK_SIZE_BYTE 512
 #define DEFAULT_NUMBER_BLOCKS 4096
 #define FILE_NAME "disk.bin"
-enum disk_status{NO_ERRORS,OUT_OF_BOUND,FILE_ERROR};
+enum disk_status{NO_ERRORS,OUT_OF_BOUND,FILE_ERROR_OPEN,FILE_ERROR_SIZE};
 
 class DiskManager {
 	private:
-		uint32_t disk_size; // Size in byte of disk
+		uint64_t disk_size; // Size in byte of disk
 		void build_disk(); // Build a disk of size 'disk_size'
+		bool check_consistency(); // If true, the file size is correct
 		
 	public:
 		DiskManager();
