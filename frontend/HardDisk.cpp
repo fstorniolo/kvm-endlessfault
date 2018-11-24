@@ -6,8 +6,8 @@ using namespace std;
 HardDisk::HardDisk() :
  					
 					BR(0),SCR(0),SNR(0),CNH(0),CNL(0),HND(0),ERR(0),STS(0),CMD(0),
-					DCR(0),DAR(0),ASR(0),enabled(false),interrupt_enabled(false),
-					current_position(0), sector_numbers(0){};
+					DCR(0),DAR(0),ASR(0),interrupt_enabled(false),
+					current_position(0), sector_numbers(0),current_sector_number(0),lba(0){};
 
 
 void HardDisk::write_reg_byte(io_addr addr, uint8_t val)
@@ -89,7 +89,9 @@ uint16_t HardDisk::read_reg_word(io_addr addr)
 	uint16_t result = 0;
 
 	switch(addr){
-		case BR_addr: result = BR; break;
+		case BR_addr: 
+			result = read_BR_register(); 
+			break;
 	}
 
 	return result;
@@ -102,28 +104,70 @@ void HardDisk::process_cmd(){
 		
 		//write
 		case 0x30:
-			STS |= 0x08;
-			STS &= 0x7F;
+			STS |= DRQ_MASK;
+			STS &= ~BUSY_MASK;
 			break;
-
+		//read
 		case 0x20:
-			STS |= 0x08;
-			STS &= 0x7F;
+			STS &= ~BUSY_MASK;
+			//call backend function sending (lba + current_sector_number++, internal_buffer) as parameters
+			STS |= DRQ_MASK;
+
+
 			break;
+		
+		//we compute the lba value and we store it.
+		//when someone will use the disk, even if he wants to read or write a number n of sectors, 
+		//he won't write again the current lba in the four registers.
+		//So this operation is needed just here.
+		lba = compute_lba();
+
+		sector_numbers = SCR;
+
 	}
 }
 
 void HardDisk::write_BR_register(uint16_t val){
 	BR = val;
-	STS |= 0X80;
+	STS |= BUSY_MASK;
 	internal_buffer[current_position++] = val;
 	if(current_position == (BLOCK_SIZE_BYTE/2 -1)){
-		//call backend function
-		STS &= 0x7F;
-		STS |= 0x08;
-		sector_numbers++;
-		//check number sectors
+		//call backend function sending (lba + current_sector_number++) as parameter
+		//clean status
+		STS &= ~BUSY_MASK;
+		STS |= DRQ_MASK;
+		if(sector_numbers == current_sector_number){
+			//clean status register 
+			STS &= ~(DRQ_MASK);
+			return;
+		}
 	}
+}
+
+uint16_t HardDisk::read_BR_register(){
+
+	STS |= BUSY_MASK;
+	BR = internal_buffer[current_position++];
+	if(current_position == (BLOCK_SIZE_BYTE/2 -1)){
+		//clean status register 
+		STS &= ~BUSY_MASK;
+		STS |= DRQ_MASK;
+		if(sector_numbers == ++current_sector_number){
+			STS &= ~(DRQ_MASK);	
+		}
+		else
+		{
+			//call backend function sending (lba + current_sector_number, internal_buffer) as parameters
+		}	
+
+	}
+	return BR;
+}
 
 
+uint32_t HardDisk::compute_lba(){
+	uint32_t lba;
+	lba = (HND << 24) + (CNH << 16) + (CNL << 8) + SNR;
+	lba &= 0x0FFFFFFF;
+	return lba;
 }
