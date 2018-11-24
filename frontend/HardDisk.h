@@ -1,3 +1,6 @@
+#ifndef HARD_DISK_H
+#define HARD_DISK_H
+
 #include "IODevice.h"
 #include "../backend/DiskManager.h"
 
@@ -42,22 +45,16 @@ private:
 	bool enabled;
 	bool interrupt_enabled;
 
-	uint8_t internal_buffer[BLOCK_SIZE_BYTE];
+	uint16_t internal_buffer[BLOCK_SIZE_BYTE/2];
 	int current_position;
+	int sector_numbers;
 
 	//bool interrupt_raised;
 
 
 private:
 	void process_cmd();
-
-	// questo metodo deve essere chiamato prima di una lettura su RBR
-	// per aggiornare il contenuto del registro RBR e STR
-	void next_RBR();
-
-	// questo metodo è chiamato per aggiornare FI in base allo stato
-	// del buffer (vuoto/non vuoto)
-	void update_FI();
+	void write_BR_register(uint16_t val);
 
 public:
 	HardDisk();
@@ -70,3 +67,5 @@ public:
 	// serve al backend per pushare eventi di inserimento come handler
 	//void insert_keycode_event(uint8_t keycode);
 };
+
+#endif
