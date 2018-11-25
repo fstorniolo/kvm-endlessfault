@@ -57,7 +57,7 @@ ConsoleLog& logg = *ConsoleLog::getInstance();
 keyboard keyb;
 
 // emulated Hard Disk (frontend)
-HardDisk hdd;
+HardDisk hdd(4);
 
 // emulated serial port (frontend)
 serial_port* com1 = nullptr;
@@ -577,25 +577,22 @@ int main(int argc, char **argv)
 			{
 				// this is a pointer to the memory section which contains the operand to return or read (if there is a input or output operation)
 				uint8_t *io_param = (uint8_t*)kr + kr->io.data_offset;
+				uint16_t *io_param_word = (uint16_t*)((uint8_t*)kr + kr->io.data_offset);
 
 				//	================= Hard Disk ================
 				if(kr->io.size == 2 && kr->io.count == 1 && (kr->io.port == 0x01F0)){
 					if(kr->io.direction == KVM_EXIT_IO_OUT)
-						hdd.write_reg_word(kr->io.port, *io_param);
+						hdd.write_reg_word(kr->io.port, *io_param_word);
 					else if(kr->io.direction == KVM_EXIT_IO_IN)
-						*io_param = hdd.read_reg_word(kr->io.port);
-				}
-
-				if(kr->io.size == 1 && kr->io.count == 1 && ((kr->io.port >= 0x01F1 && kr->io.port <= 0x01F7) || (kr->io.port == 0x03F6 || kr->io.port == 0x03F7))){
+						*io_param_word = hdd.read_reg_word(kr->io.port);
+				} else if(kr->io.size == 1 && kr->io.count == 1 && ((kr->io.port >= 0x01F1 && kr->io.port <= 0x01F7) || (kr->io.port == 0x03F6 || kr->io.port == 0x03F7))){
 					if(kr->io.direction == KVM_EXIT_IO_OUT)
 						hdd.write_reg_byte(kr->io.port, *io_param);
 					else if(kr->io.direction == KVM_EXIT_IO_IN)
 						*io_param = hdd.read_reg_byte(kr->io.port);
 				}
-
-
 				// ======== Keyboard ========
-				if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
+				else if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
 				{
 					if(kr->io.direction == KVM_EXIT_IO_OUT)
 						keyb.write_reg_byte(kr->io.port, *io_param);
@@ -650,7 +647,7 @@ int main(int argc, char **argv)
 				else
 				{
 					logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")
-						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << endl;
+						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << " with size = " << std::dec << (unsigned int)kr->io.size << " count = " << kr->io.count << endl;
 					break;
 				}
 				break;
