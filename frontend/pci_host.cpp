@@ -1,18 +1,32 @@
 #include "pci_host.h"
 #include <iostream>
 
-using namespace std;
+//TODO:
+
+/*
+
+Scrittura e lettura con diverse dimensioni
+
+*/
+
 
 pci_host::pci_host() : CAP(0), CDP(0){
 
 	for(int i=0;i<32;i++){
 		for(int j=0;j<8;j++){
+
+			uint8_t *ptr = &(devices[i].functions[j].registers[0]);
+
+			uint16_t *new_ptr = reinterpret_cast<uint16_t*>(ptr);
+
 			if(i==1 && j==0){						//dispositivo 1, funzione 0 bus 0
-				devices[i].functions[j][0] = 0x8086;
-				devices[i].functions[j][1] = 0x8087;
+				//devices[i].functions[j].registers[0] = 0x8086;
+				//devices[i].functions[j][1] = 0x8087;
+				new_ptr[0] = 0x8086;
+				new_ptr[1] = 0x8087;
 			}
 			else
-				devices[i].functions[j][0] = -1;
+				new_ptr[0] = -1;
 
 		}
 	}
@@ -20,33 +34,90 @@ pci_host::pci_host() : CAP(0), CDP(0){
 	//pthread_mutex_init(&mutex, NULL);
 }
 
-void pci_host::write_reg(io_addr addr, uint32_t val);
-
+void pci_host::write_reg_long(io_addr addr, uint32_t val)
 {
 	//pthread_mutex_lock(&mutex);
 
 	switch(addr) {
 		case CAP_addr: CAP=val; prepare_data(); break;
-		case CDP_addr: break;// diversi tipi di scrittura
+		case CDP_addr: break;			//TODO
 	}
 
 	//pthread_mutex_unlock(&mutex);
 }
 
-uint32_t pci_host::read_reg(io_addr addr){
+void pci_host::write_reg_word(io_addr addr, uint16_t val)
+{
+	//pthread_mutex_lock(&mutex);
+
+	switch(addr) {
+		case CAP_addr: break;
+		case CDP_addr: break;			//TODO
+	}
+
+	//pthread_mutex_unlock(&mutex);
+}
+
+void pci_host::write_reg_byte(io_addr addr, uint8_t val)
+
+{
+	//pthread_mutex_lock(&mutex);
+
+	switch(addr) {
+		case CAP_addr: break;
+		case CDP_addr: break;			//TODO
+	}
+
+	//pthread_mutex_unlock(&mutex);
+}
+
+uint32_t pci_host::read_reg_long(io_addr addr){
 
 	switch(addr) {
 		//case CAP_addr: return 0xFFFFFFFF;  					//non dovrebbe esistere
 		case CAP_addr: return CAP;  							//solo per debug
-		case CDP_addr: return read_from_cdp();
+		case CDP_addr: 
+
+			uint8_t *ptr = &(devices[device_number].functions[function_number].registers[0]);
+			ptr += offset_number;
+
+			uint32_t *new_ptr = reinterpret_cast<uint32_t*>(ptr);
+
+			return *new_ptr;
 	}
 
 }
 
-uint32_t pci_host::read_from_cdp(){
+uint8_t pci_host::read_reg_byte(io_addr addr){
 
-	return devices[device_number].functions[function_number][offset_number/2];
+	switch(addr) {
+		case CAP_addr: return -1;  					//non dovrebbe esistere
+		//case CAP_addr: return CAP;  							//solo per debug
+		case CDP_addr: 
+			return devices[device_number].functions[function_number].registers[offset_number];
+	}
+
 }
+
+uint16_t pci_host::read_reg_word(io_addr addr){
+	switch(addr) {
+		case CAP_addr: return -1; break;  		//NON HA SENSO!
+		case CDP_addr: 
+
+			uint8_t *ptr = &(devices[device_number].functions[function_number].registers[0]);
+			ptr += offset_number;
+
+			uint16_t *new_ptr = reinterpret_cast<uint16_t*>(ptr);
+
+			return *new_ptr;
+	}
+
+}
+
+/*uint32_t pci_host::read_from_cdp_long(){
+
+	return (uint32_t)(devices[device_number].functions[function_number][offset_number/2]);
+}*/
 
 
 void pci_host::prepare_data(){
@@ -58,7 +129,7 @@ void pci_host::prepare_data(){
 	bus_number = 0;
 	device_number = (CAP >> 11) & 0x0000001F;
 	function_number = (CAP >> 8) & 0x00000007;
-	offset_number = CAP & 0x000000FF;
+	offset_number = (uint8_t)(CAP & 0x000000FF);
 
 
 }

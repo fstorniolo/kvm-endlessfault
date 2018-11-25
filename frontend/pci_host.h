@@ -1,3 +1,6 @@
+#ifndef PCI_HOST_H
+#define PCI_HOST_H
+
 #include "IODevice.h"
 #include <stdint.h>
 #include <pthread.h>
@@ -6,7 +9,7 @@
 struct pci_device_function
 {
 
-	uint16_t registers[4];
+	uint8_t registers[8];
 
 	
 };
@@ -40,12 +43,12 @@ class pci_host : public IODevice {
 
 		//void process_cmd();
 		void prepare_data();
-		uint32_t read_from_cdp();
+		//uint32_t read_from_cdp();
 
 		uint32_t device_number;
 		uint32_t bus_number;			//sempre 0?
 		uint32_t function_number;
-		uint32_t offset_number;
+		uint8_t offset_number;
 
 		pci_device devices[32];			//bus 0;
 
@@ -54,10 +57,13 @@ class pci_host : public IODevice {
 public:
 	pci_host();
 
-	void write_reg(io_addr addr, uint32_t val);
-	uint32_t read_reg(io_addr addr);
-
-	uint32_t read_reg_byte(io_addr addr);
+	void write_reg_long(io_addr addr, uint32_t val);
+	void write_reg_word(io_addr addr, uint16_t val);
+	void write_reg_byte(io_addr addr, uint8_t val);
+	
+	uint32_t read_reg_long(io_addr addr);
+	uint16_t read_reg_word(io_addr addr);
+	uint8_t  read_reg_byte(io_addr addr);
 
 };
 
