@@ -10,7 +10,6 @@
 
 #include "frontend/IODevice.h"
 #include "frontend/keyboard.h"
-#include "frontend/HardDisk.h"
 #include "frontend/serial_port.h"
 #include "backend/ConsoleLog.h"
 #include "backend/ConsoleInput.h"
@@ -19,6 +18,8 @@
 #include "backend/ConsoleOutput.h"
 #include "frontend/vgaController.h"
 #include "INIReader.h"
+
+#include "frontend/pci_host.h"
 
 #include "gdbserver/gdbserver.h"
 
@@ -56,9 +57,6 @@ ConsoleLog& logg = *ConsoleLog::getInstance();
 // emulated keyboard (frontend)
 keyboard keyb;
 
-// emulated Hard Disk (frontend)
-HardDisk hdd;
-
 // emulated serial port (frontend)
 serial_port* com1 = nullptr;
 serial_port* com2 = nullptr;
@@ -67,6 +65,10 @@ serial_port* com4 = nullptr;
 
 // keyboard backend
 ConsoleInput* console_in;
+
+// PCI 
+
+pci_host* pci = nullptr;
 
 //text mode video memory emulation  
 ConsoleOutput* console_out = nullptr;
@@ -99,6 +101,7 @@ void initIO()
 	com2 = new serial_port(0x2f8, logg);
 	com3 = new serial_port(0x3e8, logg);
 	com4 = new serial_port(0x2e8, logg);
+	pci = new pci_host();
 
 	vga.setVMem((uint16_t*)(guest_physical_memory + 0xB8000)); // set text mode video memory offset
 
@@ -576,23 +579,11 @@ int main(int argc, char **argv)
 			case KVM_EXIT_IO:
 			{
 				// this is a pointer to the memory section which contains the operand to return or read (if there is a input or output operation)
-				uint8_t *io_param = (uint8_t*)kr + kr->io.data_offset;
+				//			uint32_t *new_ptr = reinterpret_cast<uint32_t*>(ptr);
 
-				//	================= Hard Disk ================
-				if(kr->io.size == 2 && kr->io.count == 1 && (kr->io.port == 0x01F0)){
-					if(kr->io.direction == KVM_EXIT_IO_OUT)
-						hdd.write_reg_word(kr->io.port, *io_param);
-					else if(kr->io.direction == KVM_EXIT_IO_IN)
-						*io_param = hdd.read_reg_word(kr->io.port);
-				}
-
-				if(kr->io.size == 1 && kr->io.count == 1 && ((kr->io.port >= 0x01F1 && kr->io.port <= 0x01F7) || (kr->io.port == 0x03F6 || kr->io.port == 0x03F7))){
-					if(kr->io.direction == KVM_EXIT_IO_OUT)
-						hdd.write_reg_byte(kr->io.port, *io_param);
-					else if(kr->io.direction == KVM_EXIT_IO_IN)
-						*io_param = hdd.read_reg_byte(kr->io.port);
-				}
-
+				uint8_t *io_param 		= (uint8_t*)kr + kr->io.data_offset;
+				uint16_t *io_param_word = reinterpret_cast<uint16_t*>(io_param);
+				uint32_t *io_param_long = reinterpret_cast<uint32_t*>(io_param);
 
 				// ======== Keyboard ========
 				if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
@@ -645,12 +636,28 @@ int main(int argc, char **argv)
 				// ======== Controller PCI Registers ========
 				else if(kr->io.port == 0xcfc || kr->io.port == 0xcf8)
 				{
+					if(kr->io.direction == KVM_EXIT_IO_OUT){
+						if(kr->io.size == 1)
+							pci->write_reg_byte(kr->io.port, *io_param);
+						else if(kr->io.size == 2)
+							pci->write_reg_word(kr->io.port, *io_param_word);
+						else if(kr->io.size == 4)
+							pci->write_reg_long(kr->io.port, *io_param_long);
+					}
+					else if(kr->io.direction == KVM_EXIT_IO_IN){
+						if(kr->io.size == 1)
+							*io_param = pci->read_reg_byte(kr->io.port);
+						else if(kr->io.size == 2)
+							*io_param_word = pci->read_reg_word(kr->io.port);
+						else if(kr->io.size == 4)
+							*io_param_long = pci->read_reg_long(kr->io.port);
+					}
 					// target programs iterate on bus pci devices and slow down the execution of the program so we skip those warnings
 				}
 				else
 				{
-					logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")
-						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << endl;
+					/*logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")
+						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << endl;*/
 					break;
 				}
 				break;

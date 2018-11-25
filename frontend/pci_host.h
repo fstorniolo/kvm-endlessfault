@@ -4,6 +4,9 @@
 #include "IODevice.h"
 #include <stdint.h>
 #include <pthread.h>
+#include "../backend/ConsoleLog.h"
+
+extern ConsoleLog& logg;
 
 
 struct pci_device_function
