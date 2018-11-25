@@ -38,16 +38,17 @@ private:
 	static const io_addr DAR_addr = 0x03F7;
 
 
-	/*static const uint8_t FI_MASK = 1u;
-	static const uint8_t FO_MASK = 1u << 1;*/
+	static const uint8_t BUSY_MASK = 0x80;
+	static const uint8_t DRQ_MASK = 0x08;
 
 	// === Internal state ===
-	bool enabled;
 	bool interrupt_enabled;
 
 	uint16_t internal_buffer[BLOCK_SIZE_BYTE/2];
 	int current_position;
 	int sector_numbers;
+	int current_sector_number;
+	uint32_t lba;
 
 	//bool interrupt_raised;
 
@@ -55,6 +56,8 @@ private:
 private:
 	void process_cmd();
 	void write_BR_register(uint16_t val);
+	uint16_t read_BR_register();
+	void clean_all_registers();
 
 public:
 	HardDisk();
@@ -63,6 +66,7 @@ public:
 	uint8_t read_reg_byte(io_addr addr);
 	void write_reg_word(io_addr addr, uint16_t val);
 	uint16_t read_reg_word(io_addr addr);
+	uint32_t compute_lba();
 
 	// serve al backend per pushare eventi di inserimento come handler
 	//void insert_keycode_event(uint8_t keycode);

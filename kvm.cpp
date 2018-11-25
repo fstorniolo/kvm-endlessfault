@@ -56,6 +56,9 @@ ConsoleLog& logg = *ConsoleLog::getInstance();
 // emulated keyboard (frontend)
 keyboard keyb;
 
+// emulated Hard Disk (frontend)
+HardDisk hdd;
+
 // emulated serial port (frontend)
 serial_port* com1 = nullptr;
 serial_port* com2 = nullptr;
@@ -574,6 +577,22 @@ int main(int argc, char **argv)
 			{
 				// this is a pointer to the memory section which contains the operand to return or read (if there is a input or output operation)
 				uint8_t *io_param = (uint8_t*)kr + kr->io.data_offset;
+
+				//	================= Hard Disk ================
+				if(kr->io.size == 2 && kr->io.count == 1 && (kr->io.port == 0x01F0)){
+					if(kr->io.direction == KVM_EXIT_IO_OUT)
+						hdd.write_reg_word(kr->io.port, *io_param);
+					else if(kr->io.direction == KVM_EXIT_IO_IN)
+						*io_param = hdd.read_reg_word(kr->io.port);
+				}
+
+				if(kr->io.size == 1 && kr->io.count == 1 && ((kr->io.port >= 0x01F1 && kr->io.port <= 0x01F7) || (kr->io.port == 0x03F6 || kr->io.port == 0x03F7))){
+					if(kr->io.direction == KVM_EXIT_IO_OUT)
+						hdd.write_reg_byte(kr->io.port, *io_param);
+					else if(kr->io.direction == KVM_EXIT_IO_IN)
+						*io_param = hdd.read_reg_byte(kr->io.port);
+				}
+
 
 				// ======== Keyboard ========
 				if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
