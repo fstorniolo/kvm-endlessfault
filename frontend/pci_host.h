@@ -51,7 +51,7 @@ class pci_host : public IODevice {
 		uint32_t device_number;
 		uint32_t bus_number;			//sempre 0?
 		uint32_t function_number;
-		uint8_t offset_number;
+		uint32_t offset_number;
 
 		pci_device devices[32];			//bus 0;
 

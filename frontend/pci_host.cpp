@@ -1,5 +1,6 @@
 #include "pci_host.h"
 #include <iostream>
+#include <bitset>
 
 using namespace std;
 
@@ -12,14 +13,14 @@ pci_host::pci_host() : CAP(0), CDP(0){
 
 			uint16_t *new_ptr = reinterpret_cast<uint16_t*>(ptr);
 
-//			if(i==1 && j==0){						//dispositivo 1, funzione 0 bus 0
+			if(i==1 && j==0){						//dispositivo 1, funzione 0 bus 0
 				//devices[i].functions[j].registers[0] = 0x8086;
 				//devices[i].functions[j][1] = 0x8087;
 				new_ptr[0] = 0x1234;
 				new_ptr[1] = 0x1010;
-		//	}
-		//	else
-		//		new_ptr[0] = -1;
+			}
+			else
+				new_ptr[0] = -1;
 
 		}
 	}
@@ -97,17 +98,27 @@ uint8_t pci_host::read_reg_byte(io_addr addr){
 }
 
 uint16_t pci_host::read_reg_word(io_addr addr){
+	uint8_t *ptr;
+	uint16_t *new_ptr;
+
 	switch(addr) {
 		case CAP_addr: return -1; break;  		//NON HA SENSO!
 		case CDP_addr: 
 
-			uint8_t *ptr = &(devices[device_number].functions[function_number].registers[0]);
+			ptr = &(devices[device_number].functions[function_number].registers[0]);
 			ptr += offset_number;
 
-			uint16_t *new_ptr = reinterpret_cast<uint16_t*>(ptr);
+			new_ptr = reinterpret_cast<uint16_t*>(ptr);
+			return *new_ptr;
+			break;
 
-			logg<<"RISPONDO "<<*new_ptr<<endl;
+		case CDP_addr+2:
+			//logg<<"EFFESS"<<endl;
 
+			ptr = &(devices[device_number].functions[function_number].registers[0]);
+			ptr += (offset_number + 2);
+
+			new_ptr = reinterpret_cast<uint16_t*>(ptr);
 			return *new_ptr;
 	}
 
@@ -125,13 +136,18 @@ void pci_host::prepare_data(){
 		return;
 	}*/
 
+	//logg<<bitset<32>(CAP)<<endl;
+
 	bus_number = 0;
 	device_number = (CAP >> 11) & 0x0000001F;
 	function_number = (CAP >> 8) & 0x00000007;
-	offset_number = (uint8_t)(CAP & 0x000000FF);
+	offset_number = (CAP & 0x000000FF);
 
-	//logg<<device_number<<" "<<function_number<<endl;
+	//if(offset_number != 0)
+	//	logg<<"HURRA"<<endl;
 
+	//logg<<device_number<<" "<<function_number<<" ->"<<offset_number<<endl;
+	//
 
 }
 

@@ -634,8 +634,9 @@ int main(int argc, char **argv)
 							*io_param = com4->read_reg_byte(kr->io.port);
 				}
 				// ======== Controller PCI Registers ========
-				else if(kr->io.port == 0xcfc || kr->io.port == 0xcf8)
+				else if((kr->io.port >= 0xcfc && kr->io.port <= 0xcff) || kr->io.port == 0xcf8)			//offset
 				{
+
 					if(kr->io.direction == KVM_EXIT_IO_OUT){
 						if(kr->io.size == 1)
 							pci->write_reg_byte(kr->io.port, *io_param);
@@ -645,6 +646,7 @@ int main(int argc, char **argv)
 							pci->write_reg_long(kr->io.port, *io_param_long);
 					}
 					else if(kr->io.direction == KVM_EXIT_IO_IN){
+
 						if(kr->io.size == 1)
 							*io_param = pci->read_reg_byte(kr->io.port);
 						else if(kr->io.size == 2)
