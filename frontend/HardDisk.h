@@ -3,8 +3,11 @@
 
 #include "IODevice.h"
 #include "../backend/DiskManager.h"
+#include "../backend/ConsoleLog.h"
 
 
+
+extern ConsoleLog& logg;
 
 
 class HardDisk : public IODevice {

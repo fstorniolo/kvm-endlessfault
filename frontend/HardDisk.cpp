@@ -121,11 +121,14 @@ void HardDisk::process_cmd(){
 		//when someone will use the disk, even if he wants to read or write a number n of sectors, 
 		//he won't write again the current lba in the four registers.
 		//So this operation is needed just here.
-		lba = compute_lba();
-
-		sector_numbers_cmd = SCR;
 
 	}
+	lba = compute_lba();
+	//#ifdef DEBUG_LOG
+	logg << "print lba: " << lba << endl;
+	//#endif
+	sector_numbers_cmd = SCR;
+
 }
 
 void HardDisk::write_BR_register(uint16_t val){
@@ -152,6 +155,7 @@ uint16_t HardDisk::read_BR_register(){
 
 	STS |= BUSY_MASK;
 	BR = *reinterpret_cast<uint16_t*>(&internal_buffer[current_position]);
+	logg << "ptint BR: " << BR << endl;
 	current_position+=2;
 
 	if(current_position >= (BLOCK_SIZE_BYTE -1)){
