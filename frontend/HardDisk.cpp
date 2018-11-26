@@ -8,7 +8,7 @@ HardDisk::HardDisk(uint32_t num_sector) :
 					BR(0),SCR(0),SNR(0),CNH(0),CNL(0),HND(0),ERR(0),STS(0),CMD(0),
 					DCR(0),DAR(0),ASR(0),interrupt_enabled(false),
 					current_position(0), sector_numbers_cmd(0),current_sector_number(0),lba(0),
-					num_sector_hdd(num_sector),disk_manager(num_sector){};
+					num_sector_hdd(num_sector),disk_manager(num_sector),PCIDevice(HDD_VENDOR_ID, HDD_DEVICE_ID){};
 
 
 void HardDisk::write_reg_byte(io_addr addr, uint8_t val)

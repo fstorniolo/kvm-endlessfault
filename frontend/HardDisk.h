@@ -1,7 +1,9 @@
 #ifndef HARD_DISK_H
 #define HARD_DISK_H
+#define HDD_VENDOR_ID 7777
+#define HDD_DEVICE_ID 8888
 
-#include "IODevice.h"
+#include "PCIDevice.h"
 #include "../backend/DiskManager.h"
 #include "../backend/ConsoleLog.h"
 
@@ -10,7 +12,7 @@
 extern ConsoleLog& logg;
 
 
-class HardDisk : public IODevice {
+class HardDisk : public PCIDevice {
 private:
 	// === Registers ===
 	uint16_t BR;	// buffer that contains data to read or to write

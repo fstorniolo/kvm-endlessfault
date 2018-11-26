@@ -2,7 +2,9 @@
 #include <iostream>
 
 
-pci_host::pci_host() : CAP(0), CDP(0){
+pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0){
+	//test connection between two modules
+	logg << "pci_host: vendorID "<< connected_PCI_devices[0]->getVendorID() << ", deviceID " << connected_PCI_devices[0]->getDeviceID() << std::endl;
 
 	for(int i=0;i<32;i++){
 		for(int j=0;j<8;j++){

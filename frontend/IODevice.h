@@ -12,6 +12,10 @@ class IODevice {
 	virtual uint8_t read_reg_byte(io_addr addr);
 	virtual uint16_t read_reg_word(io_addr addr);
 	virtual uint32_t read_reg_long(io_addr addr);
+	
+	public:
+		virtual uint16_t vendorID();
+
 };
 
 #endif

@@ -2,6 +2,8 @@
 #define PCI_HOST_H
 
 #include "IODevice.h"
+#include "PCIDevice.h"
+#include "HardDisk.h"
 #include <stdint.h>
 #include <pthread.h>
 #include "../backend/ConsoleLog.h"
@@ -60,7 +62,7 @@ class pci_host : public IODevice {
 
 
 public:
-	pci_host();
+	pci_host(PCIDevice** connected_PCI_devices);
 
 	void write_reg_long(io_addr addr, uint32_t val);
 	void write_reg_word(io_addr addr, uint16_t val);

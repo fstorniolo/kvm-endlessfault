@@ -23,3 +23,8 @@ uint16_t IODevice::read_reg_word(io_addr addr) {
 uint32_t IODevice::read_reg_long(io_addr addr) {
 	return 0;
 }
+
+//device not connected
+uint16_t IODevice::vendorID(){
+	return 0xFFFF;
+}

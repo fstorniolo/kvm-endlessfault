@@ -7,8 +7,11 @@
 #include <cstring>
 #include <sys/mman.h>
 #include <signal.h>
-
 #include "frontend/IODevice.h"
+#include "frontend/PCIDevice.h"
+
+#include "frontend/HardDisk.h"
+
 #include "frontend/keyboard.h"
 #include "frontend/serial_port.h"
 #include "backend/ConsoleLog.h"
@@ -18,7 +21,6 @@
 #include "backend/ConsoleOutput.h"
 #include "frontend/vgaController.h"
 #include "INIReader.h"
-#include "frontend/HardDisk.h"
 
 #include "frontend/pci_host.h"
 
@@ -44,6 +46,8 @@ using namespace std;
  */
 #include <linux/kvm.h>
 
+#define DEVICES_ON_BUS  32
+
 
 // guest memory
 uint32_t GUEST_PHYSICAL_MEMORY_SIZE = 8*1024*1024; //default guest physical memory to 8MB
@@ -57,6 +61,15 @@ ConsoleLog& logg = *ConsoleLog::getInstance();
 
 // emulated keyboard (frontend)
 keyboard keyb;
+
+//it will contain pointer to IO devices connected to the PCI bus
+//if an element of the array is null means that it's not connected to any device
+
+PCIDevice* connected_PCI_devices[32];
+
+
+//for(uint32_t i=0; i < 32; i++)
+//	connected_PCI_devices[i] = nullptr;
 
 
 // emulated Hard Disk (frontend)
@@ -105,7 +118,9 @@ void initIO()
 	com2 = new serial_port(0x2f8, logg);
 	com3 = new serial_port(0x3e8, logg);
 	com4 = new serial_port(0x2e8, logg);
-	pci = new pci_host();
+	connected_PCI_devices[0] = &hdd;
+
+	pci = new pci_host(connected_PCI_devices);
 
 	vga.setVMem((uint16_t*)(guest_physical_memory + 0xB8000)); // set text mode video memory offset
 
