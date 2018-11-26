@@ -31,7 +31,8 @@ DiskManager::DiskManager() : DiskManager(DEFAULT_NUMBER_BLOCKS){};
 
 DiskManager::DiskManager(uint32_t blocks_number){
 	disk_size = blocks_number*BLOCK_SIZE_BYTE;
-	build_disk(); // Build a disk of size 'disk_size'
+	if(!check_consistency()) //if file exists
+		build_disk(); // Build a disk of size 'disk_size'
 }
 
 // Read at sector index in file and copy it into buffer

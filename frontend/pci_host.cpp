@@ -1,8 +1,6 @@
 #include "pci_host.h"
 #include <iostream>
-#include <bitset>
 
-using namespace std;
 
 pci_host::pci_host() : CAP(0), CDP(0){
 
@@ -32,12 +30,12 @@ void pci_host::write_reg_long(io_addr addr, uint32_t val)
 {
 	//pthread_mutex_lock(&mutex);
 
-
 	switch(addr) {
 		case CAP_addr: 
 			CAP=val; 
 			prepare_data(); 
 			break;
+
 		case CDP_addr: break;			//TODO
 	}
 
@@ -74,6 +72,7 @@ uint32_t pci_host::read_reg_long(io_addr addr){
 	switch(addr) {
 		//case CAP_addr: return 0xFFFFFFFF;  					//non dovrebbe esistere
 		case CAP_addr: return CAP;  break;							//solo per debug
+
 		case CDP_addr: 
 
 			uint8_t *ptr = &(devices[device_number].functions[function_number].registers[0]);
@@ -119,6 +118,7 @@ uint16_t pci_host::read_reg_word(io_addr addr){
 			ptr += (offset_number + 2);
 
 			new_ptr = reinterpret_cast<uint16_t*>(ptr);
+
 			return *new_ptr;
 	}
 
@@ -148,6 +148,7 @@ void pci_host::prepare_data(){
 
 	//logg<<device_number<<" "<<function_number<<" ->"<<offset_number<<endl;
 	//
+
 
 }
 

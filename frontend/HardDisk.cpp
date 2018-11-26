@@ -3,11 +3,12 @@
 
 using namespace std;
 
-HardDisk::HardDisk() :
+HardDisk::HardDisk(uint32_t num_sector) :
  					
 					BR(0),SCR(0),SNR(0),CNH(0),CNL(0),HND(0),ERR(0),STS(0),CMD(0),
 					DCR(0),DAR(0),ASR(0),interrupt_enabled(false),
-					current_position(0), sector_numbers(0),current_sector_number(0),lba(0){};
+					current_position(0), sector_numbers_cmd(0),current_sector_number(0),lba(0),
+					num_sector_hdd(num_sector),disk_manager(num_sector){};
 
 
 void HardDisk::write_reg_byte(io_addr addr, uint8_t val)
@@ -120,23 +121,29 @@ void HardDisk::process_cmd(){
 		//when someone will use the disk, even if he wants to read or write a number n of sectors, 
 		//he won't write again the current lba in the four registers.
 		//So this operation is needed just here.
-		lba = compute_lba();
-
-		sector_numbers = SCR;
 
 	}
+	lba = compute_lba();
+	//#ifdef DEBUG_LOG
+	logg << "print lba: " << lba << endl;
+	//#endif
+	sector_numbers_cmd = SCR;
+
 }
 
 void HardDisk::write_BR_register(uint16_t val){
 	BR = val;
 	STS |= BUSY_MASK;
-	internal_buffer[current_position++] = val;
-	if(current_position == (BLOCK_SIZE_BYTE/2 -1)){
+	internal_buffer[current_position++] = (val & 0x00FF);
+	internal_buffer[current_position++] = val >> 8;
+	if(current_position >= 511){
 		//call backend function sending (lba + current_sector_number++) as parameter
+		current_position = 0;
+		disk_manager.write(internal_buffer,lba + current_sector_number++);
 		//clean status
 		STS &= ~BUSY_MASK;
 		STS |= DRQ_MASK;
-		if(sector_numbers == current_sector_number){
+		if(sector_numbers_cmd == current_sector_number){
 			//clean status register 
 			STS &= ~(DRQ_MASK);
 			return;
@@ -147,19 +154,29 @@ void HardDisk::write_BR_register(uint16_t val){
 uint16_t HardDisk::read_BR_register(){
 
 	STS |= BUSY_MASK;
-	BR = internal_buffer[current_position++];
-	if(current_position == (BLOCK_SIZE_BYTE/2 -1)){
+	uint16_t *new_buffer;
+
+	if(current_position == 0){
+		disk_manager.read(internal_buffer,lba + current_sector_number++);
+		new_buffer = reinterpret_cast<uint16_t*>(&internal_buffer[0]);
+	}
+
+	BR = new_buffer[current_position];
+
+	logg << "print BR: " << BR << endl;
+	logg << "current_position: " << current_position << endl;
+	current_position+=1;
+
+	if(current_position >= (BLOCK_SIZE_BYTE/2)){
 		//clean status register 
 		STS &= ~BUSY_MASK;
 		STS |= DRQ_MASK;
-		if(sector_numbers == ++current_sector_number){
+		current_position = 0;
+		//disk_manager.read(internal_buffer,lba + current_sector_number++);
+
+		if(sector_numbers_cmd == current_sector_number){
 			STS &= ~(DRQ_MASK);	
 		}
-		else
-		{
-			//call backend function sending (lba + current_sector_number, internal_buffer) as parameters
-		}	
-
 	}
 	return BR;
 }

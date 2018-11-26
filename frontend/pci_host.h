@@ -9,6 +9,7 @@
 extern ConsoleLog& logg;
 
 
+
 struct pci_device_function
 {
 
@@ -52,6 +53,7 @@ class pci_host : public IODevice {
 		uint32_t bus_number;			//sempre 0?
 		uint32_t function_number;
 		uint32_t offset_number;
+
 
 		pci_device devices[32];			//bus 0;
 

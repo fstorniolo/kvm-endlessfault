@@ -3,8 +3,11 @@
 
 #include "IODevice.h"
 #include "../backend/DiskManager.h"
+#include "../backend/ConsoleLog.h"
 
 
+
+extern ConsoleLog& logg;
 
 
 class HardDisk : public IODevice {
@@ -44,11 +47,13 @@ private:
 	// === Internal state ===
 	bool interrupt_enabled;
 
-	uint16_t internal_buffer[BLOCK_SIZE_BYTE/2];
+	uint8_t internal_buffer[BLOCK_SIZE_BYTE];
 	int current_position;
-	int sector_numbers;
+	int sector_numbers_cmd;
 	int current_sector_number;
 	uint32_t lba;
+	uint32_t num_sector_hdd;
+	DiskManager disk_manager;
 
 	//bool interrupt_raised;
 
@@ -60,7 +65,7 @@ private:
 	void clean_all_registers();
 
 public:
-	HardDisk();
+	HardDisk(uint32_t num_sectors);
 
 	void write_reg_byte(io_addr addr, uint8_t val);
 	uint8_t read_reg_byte(io_addr addr);
