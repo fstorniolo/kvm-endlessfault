@@ -154,15 +154,25 @@ void HardDisk::write_BR_register(uint16_t val){
 uint16_t HardDisk::read_BR_register(){
 
 	STS |= BUSY_MASK;
-	BR = *reinterpret_cast<uint16_t*>(&internal_buffer[current_position]);
-	logg << "ptint BR: " << BR << endl;
-	current_position+=2;
+	uint16_t *new_buffer;
 
-	if(current_position >= (BLOCK_SIZE_BYTE -1)){
+	if(current_position == 0){
+		disk_manager.read(internal_buffer,lba + current_sector_number++);
+		new_buffer = reinterpret_cast<uint16_t*>(&internal_buffer[0]);
+	}
+
+	BR = new_buffer[current_position];
+
+	logg << "print BR: " << BR << endl;
+	logg << "current_position: " << current_position << endl;
+	current_position+=1;
+
+	if(current_position >= (BLOCK_SIZE_BYTE/2)){
 		//clean status register 
 		STS &= ~BUSY_MASK;
 		STS |= DRQ_MASK;
-		disk_manager.read(internal_buffer,lba + current_sector_number++);
+		current_position = 0;
+		//disk_manager.read(internal_buffer,lba + current_sector_number++);
 
 		if(sector_numbers_cmd == current_sector_number){
 			STS &= ~(DRQ_MASK);	
