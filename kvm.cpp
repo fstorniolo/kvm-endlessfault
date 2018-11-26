@@ -18,6 +18,7 @@
 #include "backend/ConsoleOutput.h"
 #include "frontend/vgaController.h"
 #include "INIReader.h"
+#include "frontend/HardDisk.h"
 
 #include "frontend/pci_host.h"
 
