@@ -1,18 +1,16 @@
 #ifndef HARD_DISK_H
 #define HARD_DISK_H
-#define HDD_VENDOR_ID 7777
-#define HDD_DEVICE_ID 8888
 
-#include "PCIDevice.h"
+
+#include "IODevice.h"
 #include "../backend/DiskManager.h"
 #include "../backend/ConsoleLog.h"
-
 
 
 extern ConsoleLog& logg;
 
 
-class HardDisk : public PCIDevice {
+class HardDisk : public IODevice {
 private:
 	// === Registers ===
 	uint16_t BR;	// buffer that contains data to read or to write
@@ -29,7 +27,7 @@ private:
 	uint8_t DAR;	// here for compatibility
 	uint8_t ASR;	// here for compatibility
    	// indirizzi registri
-	static const io_addr BR_addr = 0x01F0;
+	static const io_addr BR_addr  = 0x01F0;
 	static const io_addr ERR_addr = 0x01F1;
 	static const io_addr SCR_addr = 0x01F2;
 	static const io_addr SNR_addr = 0x01F3;
@@ -38,6 +36,7 @@ private:
 	static const io_addr HND_addr = 0x01F6;
 	static const io_addr CMD_addr = 0x01F7;
 	static const io_addr STS_addr = 0x01F7;
+	
 	static const io_addr DCR_addr = 0x03F6;
 	static const io_addr ASR_addr = 0x03F6;
 	static const io_addr DAR_addr = 0x03F7;
@@ -65,6 +64,7 @@ private:
 	void write_BR_register(uint16_t val);
 	uint16_t read_BR_register();
 	void clean_all_registers();
+	uint32_t compute_lba();
 
 public:
 	HardDisk(uint32_t num_sectors);
@@ -73,7 +73,6 @@ public:
 	uint8_t read_reg_byte(io_addr addr);
 	void write_reg_word(io_addr addr, uint16_t val);
 	uint16_t read_reg_word(io_addr addr);
-	uint32_t compute_lba();
 
 	// serve al backend per pushare eventi di inserimento come handler
 	//void insert_keycode_event(uint8_t keycode);

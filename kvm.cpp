@@ -11,6 +11,7 @@
 #include "frontend/PCIDevice.h"
 
 #include "frontend/HardDisk.h"
+#include "frontend/PCI_ATA.h"
 
 #include "frontend/keyboard.h"
 #include "frontend/serial_port.h"
@@ -68,12 +69,11 @@ keyboard keyb;
 PCIDevice* connected_PCI_devices[32];
 
 
-//for(uint32_t i=0; i < 32; i++)
-//	connected_PCI_devices[i] = nullptr;
-
-
 // emulated Hard Disk (frontend)
 HardDisk hdd(4);
+// emulated PCI-ATA bridge
+PCI_ATA ata_bridge(&hdd);
+
 // emulated serial port (frontend)
 serial_port* com1 = nullptr;
 serial_port* com2 = nullptr;
@@ -106,6 +106,11 @@ void endIO(int val)
 
 void initIO()
 {
+
+	for(uint32_t i=0; i < 32; i++)
+		connected_PCI_devices[i] = nullptr;
+
+
 	// link the emulated keyboard to the console input
 	console_in = ConsoleInput::getInstance();
 	console_in->attachKeyboard(&keyb);
@@ -118,9 +123,11 @@ void initIO()
 	com2 = new serial_port(0x2f8, logg);
 	com3 = new serial_port(0x3e8, logg);
 	com4 = new serial_port(0x2e8, logg);
-	connected_PCI_devices[0] = &hdd;
+	connected_PCI_devices[0] = &ata_bridge;
 
 	pci = new pci_host(connected_PCI_devices);
+
+
 
 	vga.setVMem((uint16_t*)(guest_physical_memory + 0xB8000)); // set text mode video memory offset
 
@@ -605,21 +612,8 @@ int main(int argc, char **argv)
 				uint32_t *io_param_long = reinterpret_cast<uint32_t*>(io_param);
 
 
-
-				//	================= Hard Disk ================
-				if(kr->io.size == 2 && kr->io.count == 1 && (kr->io.port == 0x01F0)){
-					if(kr->io.direction == KVM_EXIT_IO_OUT)
-						hdd.write_reg_word(kr->io.port, *io_param_word);
-					else if(kr->io.direction == KVM_EXIT_IO_IN)
-						*io_param_word = hdd.read_reg_word(kr->io.port);
-				} else if(kr->io.size == 1 && kr->io.count == 1 && ((kr->io.port >= 0x01F1 && kr->io.port <= 0x01F7) || (kr->io.port == 0x03F6 || kr->io.port == 0x03F7))){
-					if(kr->io.direction == KVM_EXIT_IO_OUT)
-						hdd.write_reg_byte(kr->io.port, *io_param);
-					else if(kr->io.direction == KVM_EXIT_IO_IN)
-						*io_param = hdd.read_reg_byte(kr->io.port);
-				}
 				// ======== Keyboard ========
-				else if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
+				if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
 				{
 					if(kr->io.direction == KVM_EXIT_IO_OUT)
 						keyb.write_reg_byte(kr->io.port, *io_param);
@@ -688,6 +682,26 @@ int main(int argc, char **argv)
 							*io_param_long = pci->read_reg_long(kr->io.port);
 					}
 					// target programs iterate on bus pci devices and slow down the execution of the program so we skip those warnings
+				}				
+				//	================= Hard Disk ( with PCI ) ================
+				else if(kr->io.port >= connected_PCI_devices[0]->getBar(0) && kr->io.port <= connected_PCI_devices[0]->getBar(0)+7){
+					if(kr->io.size == 2 && kr->io.count == 1){
+						if(kr->io.direction == KVM_EXIT_IO_OUT)
+							connected_PCI_devices[0]->write_reg_word(kr->io.port, *io_param_word);
+						else if(kr->io.direction == KVM_EXIT_IO_IN)
+							*io_param_word = connected_PCI_devices[0]->read_reg_word(kr->io.port);
+					} else if(kr->io.size == 1 && kr->io.count == 1){
+							if(kr->io.direction == KVM_EXIT_IO_OUT)
+							connected_PCI_devices[0]->write_reg_byte(kr->io.port, *io_param);
+						else if(kr->io.direction == KVM_EXIT_IO_IN)
+							*io_param = connected_PCI_devices[0]->read_reg_byte(kr->io.port);
+					}
+				} else if(kr->io.port >= connected_PCI_devices[0]->getBar(1) && kr->io.port <= connected_PCI_devices[0]->getBar(1)+1){
+
+					if(kr->io.direction == KVM_EXIT_IO_OUT)
+							connected_PCI_devices[0]->write_reg_byte(kr->io.port, *io_param);
+					else if(kr->io.direction == KVM_EXIT_IO_IN)
+							*io_param = connected_PCI_devices[0]->read_reg_byte(kr->io.port);
 				}
 				else
 				{

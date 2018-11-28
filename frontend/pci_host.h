@@ -10,23 +10,8 @@
 
 extern ConsoleLog& logg;
 
-
-
-struct pci_device_function
-{
-
-	uint8_t registers[8];
-
-	
-};
-
-struct pci_device
-{
-
-	pci_device_function functions[8];
-
-	
-};
+#define N_DEVICES 32
+#define N_FUNCTIONS 8
 
 class pci_host : public IODevice {
 
@@ -45,19 +30,17 @@ class pci_host : public IODevice {
 		bool interrupt_enabled;
 
 		// mutex istanza (vale sia per frontend che backend)
-		pthread_mutex_t mutex;
+		//pthread_mutex_t mutex;
 
-		//void process_cmd();
 		void prepare_data();
-		//uint32_t read_from_cdp();
 
 		uint32_t device_number;
 		uint32_t bus_number;			//sempre 0?
 		uint32_t function_number;
 		uint32_t offset_number;
 
-
-		pci_device devices[32];			//bus 0;
+		PCIDevice* devices[N_DEVICES];
+		uint32_t connected;
 
 
 
