@@ -10,14 +10,6 @@ PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID, uint32_t classCode){
 
 }
 
-PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID){
-	this->vendorID = vendorID;
-	this->deviceID = deviceID;
-
-	for(int i=0;i<6;i++)
-		bar[i] = 0;
-
-}
 
 uint16_t PCIDevice::getVendorID(){
 	return vendorID;
