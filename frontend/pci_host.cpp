@@ -25,8 +25,9 @@ pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected
 	connected++;
 
 	//PER FILIPPO, CREDO VADA FATTO ALTROVE
-	devices[0]->setBar(0x01F0,0);
-	devices[0]->setBar(0x03F6,1);
+	//After implementation move this code in kvm.cpp after constructor of PCI Host
+	devices[0]->setBar(0x05F0,0);
+	devices[0]->setBar(0x07F6,1);
 	//fine
 
 

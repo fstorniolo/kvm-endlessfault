@@ -48,7 +48,7 @@ void leggisett(natl lba, natb quanti, natw vetti[])
 			inputb(iSTS + bar0, s);
 		while ((s & 0x88) != 0x08);
 		for (int j = 0; j < 512/2; j++)
-			inputw(iBR, vetti[i*512/2 + j]);
+			inputw(iBR + bar0, vetti[i*512/2 + j]);
 	}
 }
 
