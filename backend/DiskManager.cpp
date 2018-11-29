@@ -31,7 +31,7 @@ DiskManager::DiskManager() : DiskManager(DEFAULT_NUMBER_BLOCKS){};
 
 DiskManager::DiskManager(uint32_t blocks_number){
 	disk_size = blocks_number*BLOCK_SIZE_BYTE;
-	if(!check_consistency()) //if file exists
+	if(!check_consistency()) //if file not exists
 		build_disk(); // Build a disk of size 'disk_size'
 }
 
