@@ -442,6 +442,7 @@ int main(int argc, char **argv)
 		return 4;
 	}
 
+
 	/* we interact with our kvm_fd file descriptor using ioctl()s.
 	 * There are several of them, but the most important here is the
 	 * one that allows us to create a new virtual machine.
@@ -453,6 +454,10 @@ int main(int argc, char **argv)
 		cout << "create vm: " << strerror(errno) << endl;
 		return 5;
 	}
+
+
+	int test = ioctl(kvm_fd,KVM_CHECK_EXTENSION, KVM_CAP_IRQCHIP);
+	logg << "checking if is supported KVM_CAP_IRQCHIP [0 unsupported, >0  supported, -1 err]: " << test << endl;
 
 	/* initially, the vm has no resources: no memory, no cpus.
 	 * Here we add the (guest) physical memory, using the
@@ -487,9 +492,17 @@ int main(int argc, char **argv)
 
 	/* now we can add the memory to the vm */
 	if (ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mrd) < 0) {
-		cout << "set memory (guest_physical_memory): " << strerror(errno) << endl;
+		logg << "set memory (guest_physical_memory): " << strerror(errno) << endl;
 		return 1;
 	}
+
+	// FLM ***** crete IO-APIC
+	if(ioctl(vm_fd,KVM_CREATE_IRQCHIP) < 0){
+		logg << "CREATE_IRQCHIP has not been created: " << strerror(errno) << endl;
+		return 1;
+	}else
+		logg << "IRQCHIP has been created"<<endl;
+
 
 	// load elf file
 	uint64_t entry_point = estrai_segmento(elf_file_path, (void*)guest_physical_memory, GUEST_PHYSICAL_MEMORY_SIZE);
@@ -504,6 +517,24 @@ int main(int argc, char **argv)
 		cout << "create vcpu: " << strerror(errno) << endl;
 		return 1;
 	}
+
+	/*int test1 = ioctl(vcpu_fd,KVM_INTERRUPT,)
+	if (test1< 0) {
+		logg << "test1: " << strerror(errno) << endl;
+		return 1;
+	}else
+		logg << "test1:  OK"<<endl;*/
+
+	kvm_irqchip irqchip;
+	irqchip.chip_id = 2;
+	if(ioctl(vm_fd,KVM_GET_IRQCHIP,&irqchip) != 0){
+		logg << "error in KVM_GET_IRQCHIP " << strerror(errno) << endl;
+		return 1;
+	}
+
+	logg << "base address io apic: " << std::hex << irqchip.chip.ioapic.base_address << endl;	
+	//logg << "base address io apic: " << irqchip.chip_id << endl;	
+
 
 	// start debug server if enabled
 	if( reader.GetBoolean("debug-server", "enable", false) ) {
@@ -713,11 +744,11 @@ int main(int argc, char **argv)
 				break;
 			}
 			case KVM_EXIT_MMIO:
-				logg << "kvm: unhandled KVM_EXIT_MMIO"
+				/*logg << "kvm: unhandled KVM_EXIT_MMIO"
 						<< " address=" << std::hex << (uint64_t)kr->mmio.phys_addr
 						<< " len=" << (uint32_t)kr->mmio.len
 						<< " data=" << (uint32_t)((kr->mmio.data[3] << 24) | (kr->mmio.data[2] << 16) | (kr->mmio.data[1] << 8) | kr->mmio.data[0])
-						<< " is_write=" << (short)kr->mmio.is_write << endl;
+						<< " is_write=" << (short)kr->mmio.is_write << endl;*/
 				//trace_user_program(vcpu_fd, kr);
 				//return 1;
 				break;
