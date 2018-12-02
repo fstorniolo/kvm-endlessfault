@@ -153,8 +153,7 @@ void Bootloader::setup_page_tables(kvm_sregs *sregs)
 		pdpt[i_lev3] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_addr);
 		for(uint32_t i_lev2=0; i_lev2<512; i_lev2++)
 		{
-			if( (i_lev3==0 && i_lev2==127)  // this page must be mapped otherwise it is thrown an exception when APIC is initialized
-				 || i_lev3 != (last_index_lev3)  // the last lev2 table must map only n_entry_liv2 others must map every entry
+			if(i_lev3 != (last_index_lev3)  // the last lev2 table must map only n_entry_liv2 others must map every entry
 				 || i_lev2<n_entry_lev2 )
 			{
 				virt_addr = ((uint64_t)i_lev3 << 30) + (((uint64_t)i_lev2) << 21);
@@ -169,6 +168,11 @@ void Bootloader::setup_page_tables(kvm_sregs *sregs)
 		pd_addr += 0x10000;
 		pd = reinterpret_cast<uint64_t *>(reinterpret_cast<uint64_t>(guest_mem_) + pd_addr);
 	}
+
+	// init liv3 for APIC
+	// TODO: 0xfec00000 must be user settable and not fixed
+	pdpt[3] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_addr);
+	pd[502] = PDE64_PRESENT | PDE64_RW | PDE64_USER | PDE64_PS | 0xfec00000;
 
 	sregs->cr3 = pml4_addr;
 
