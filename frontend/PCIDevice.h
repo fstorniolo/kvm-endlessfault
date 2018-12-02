@@ -3,10 +3,12 @@
 #include "IODevice.h"
 #include <stdint.h>
 
+//TODO bar is 32 bit register
 typedef uint16_t io_addr;
 
 class PCIDevice : public IODevice {
 
+	//TODO: it's needed a struct packed to emulate all the configuration space
 	private:
 		uint16_t vendorID;
 		uint16_t deviceID;

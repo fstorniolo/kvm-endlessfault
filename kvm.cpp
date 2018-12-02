@@ -12,7 +12,7 @@
 
 #include "frontend/HardDisk.h"
 #include "frontend/PCI_ATA.h"
-
+#include "frontend/PCI_APIC.h"
 #include "frontend/keyboard.h"
 #include "frontend/serial_port.h"
 #include "backend/ConsoleLog.h"
@@ -73,6 +73,7 @@ PCIDevice* connected_PCI_devices[32];
 HardDisk hdd(4);
 // emulated PCI-ATA bridge
 PCI_ATA ata_bridge(&hdd);
+PCI_APIC apic_bridge;
 
 // emulated serial port (frontend)
 serial_port* com1 = nullptr;
@@ -124,6 +125,7 @@ void initIO()
 	com3 = new serial_port(0x3e8, logg);
 	com4 = new serial_port(0x2e8, logg);
 	connected_PCI_devices[0] = &ata_bridge;
+	connected_PCI_devices[1] = &apic_bridge;
 
 	pci = new pci_host(connected_PCI_devices);
 
@@ -498,7 +500,7 @@ int main(int argc, char **argv)
 
 	// FLM ***** crete IO-APIC
 	if(ioctl(vm_fd,KVM_CREATE_IRQCHIP) < 0){
-		logg << "CREATE_IRQCHIP has not been created: " << strerror(errno) << endl;
+		logg << "IRQCHIP has not been created: " << strerror(errno) << endl;
 		return 1;
 	}else
 		logg << "IRQCHIP has been created"<<endl;
@@ -533,6 +535,8 @@ int main(int argc, char **argv)
 	}
 
 	logg << "base address io apic: " << std::hex << irqchip.chip.ioapic.base_address << endl;	
+	logg << "ioregsel address io apic: " << std::hex << irqchip.pad << endl;	
+
 	//logg << "base address io apic: " << irqchip.chip_id << endl;	
 
 
