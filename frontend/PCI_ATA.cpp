@@ -4,14 +4,8 @@
 using namespace std;
 
 
-PCI_ATA::PCI_ATA(HardDisk *hdd_instance): 
-
-	PCIDevice(ATA_VENDOR_ID, ATA_DEVICE_ID, ATA_CLASS_ID)
-
-{
-
+PCI_ATA::PCI_ATA(HardDisk *hdd_instance): PCIDevice(ATA_VENDOR_ID, ATA_DEVICE_ID, ATA_CLASS_ID) {
 	hdd = hdd_instance;
-
 };
 
 //Since Register as mapped wherever the target chooses, i convert them to normal ATA addresses

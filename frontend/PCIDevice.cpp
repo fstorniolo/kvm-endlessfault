@@ -2,7 +2,6 @@
 using namespace std;
 		
 PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID, uint32_t classCode) {
-	logg << "PCIDevice: constructor 3 arg"<<endl;
 	registers.vendorID = vendorID;
 	registers.deviceID = deviceID;
 	/*logg << "--->classCode 1:  " << classCode <<endl;
@@ -22,7 +21,6 @@ PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID, uint32_t classCode) {
 }
 
 PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID) {
-	logg << "PCIDevice: constructor 2 arg"<<endl;
 	registers.vendorID = vendorID;
 	registers.deviceID = deviceID;
 	registers.BAR0 = 0;
@@ -34,24 +32,20 @@ PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID) {
 }
 
 uint16_t PCIDevice::getVendorID() {
-	logg << "PCIDevice::getVendorID"<<endl;
 	return registers.vendorID;
 }
 
 uint16_t PCIDevice::getDeviceID() {
-	logg << "PCIDevice::getDeviceID"<<endl;
 	return registers.deviceID;
 }
 
 uint32_t PCIDevice::getClassCode() {	
-	logg << "PCIDevice::getClassCode"<<endl;
 	//uint32_t fullClassCode = 0;
 	//fullClassCode = (registers.classCode[0] << 8) | (registers.classCode[1] << 8) | (registers.classCode[2] << 8);
 	return registers.classCode;
 }
 
 uint32_t PCIDevice::getBar(uint8_t index) {
-	logg << "PCIDevice::getBar"<<endl;
 	switch (index){
 		case 0:
 			return registers.BAR0;
@@ -71,7 +65,6 @@ uint32_t PCIDevice::getBar(uint8_t index) {
 }
 
 void PCIDevice::setBar(uint32_t value,uint8_t index) {
-	logg << "PCIDevice::setBar"<<endl;
 		if(index >5)
 			return;
 

@@ -107,7 +107,7 @@ void endIO(int val)
 
 void initIO()
 {
-
+	logg << "costruttore INIT KVM" << endl;
 	for(uint32_t i=0; i < 32; i++)
 		connected_PCI_devices[i] = nullptr;
 

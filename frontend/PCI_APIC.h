@@ -16,8 +16,6 @@ class PCI_APIC : public PCIDevice {
 
 	public:
 		PCI_APIC();
-
-
 };
 
 #endif
