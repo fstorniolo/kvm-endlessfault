@@ -1,64 +1,111 @@
 #include "PCIDevice.h"
+using namespace std;
 		
-PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID, uint32_t classCode){
-	this->vendorID = vendorID;
-	this->deviceID = deviceID;
-	this->classCode = classCode;
-
-	for(int i=0;i<6;i++)
-		bar[i] = 0;
-
+PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID, uint32_t classCode) {
+	logg << "PCIDevice: constructor 3 arg"<<endl;
+	registers.vendorID = vendorID;
+	registers.deviceID = deviceID;
+	/*logg << "--->classCode 1:  " << classCode <<endl;
+	registers.classCode[0] = (uint8_t)(classCode >> 8);
+	logg << "--->classCode 2:  " << classCode <<endl;
+	registers.classCode[1] = (uint8_t)(classCode >> 16);
+	logg << "--->classCode 3:  " << classCode <<endl;
+	registers.classCode[2] = (uint8_t)(classCode >> 24);
+	logg << "--->classCode 4:  " << classCode <<endl;*/
+	registers.classCode = classCode;
+	registers.BAR0 = 0;
+	registers.BAR1 = 0;
+	registers.BAR2 = 0;
+	registers.BAR3 = 0;
+	registers.BAR4 = 0;
+	registers.BAR5 = 0;
 }
 
-PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID){
-	this->vendorID = vendorID;
-	this->deviceID = deviceID;
+PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID) {
+	logg << "PCIDevice: constructor 2 arg"<<endl;
+	registers.vendorID = vendorID;
+	registers.deviceID = deviceID;
+	registers.BAR0 = 0;
+	registers.BAR1 = 0;
+	registers.BAR2 = 0;
+	registers.BAR3 = 0;
+	registers.BAR4 = 0;
+	registers.BAR5 = 0;
 }
 
-
-uint16_t PCIDevice::getVendorID(){
-	return vendorID;
+uint16_t PCIDevice::getVendorID() {
+	logg << "PCIDevice::getVendorID"<<endl;
+	return registers.vendorID;
 }
 
-uint16_t PCIDevice::getDeviceID(){
-	return deviceID;
+uint16_t PCIDevice::getDeviceID() {
+	logg << "PCIDevice::getDeviceID"<<endl;
+	return registers.deviceID;
 }
 
-uint32_t PCIDevice::getClassCode(){
-	return classCode;
+uint32_t PCIDevice::getClassCode() {	
+	logg << "PCIDevice::getClassCode"<<endl;
+	//uint32_t fullClassCode = 0;
+	//fullClassCode = (registers.classCode[0] << 8) | (registers.classCode[1] << 8) | (registers.classCode[2] << 8);
+	return registers.classCode;
 }
 
-io_addr PCIDevice::getBar(uint8_t index){
-	if(index > 5)
-		return -1;
-
-	return bar[index];
+uint32_t PCIDevice::getBar(uint8_t index) {
+	logg << "PCIDevice::getBar"<<endl;
+	switch (index){
+		case 0:
+			return registers.BAR0;
+		case 1:
+			return registers.BAR1;
+		case 2:
+			return registers.BAR2;
+		case 3:
+			return registers.BAR3;
+		case 4:
+			return registers.BAR4;
+		case 5:
+			return registers.BAR5;
+		default:
+			return 0; // ITS CORRECT???
+	}
 }
 
-void PCIDevice::setBar(io_addr value,uint8_t index){
-	if(index >5)
-		return;
+void PCIDevice::setBar(uint32_t value,uint8_t index) {
+	logg << "PCIDevice::setBar"<<endl;
+		if(index >5)
+			return;
 
-	bar[index] = value;
-
+		switch (index){
+			case 0:
+				registers.BAR0 = value;
+				break;
+			case 1:
+				registers.BAR1 = value;
+				break;
+			case 2:
+				registers.BAR2 = value;
+				break;
+			case 3:
+				registers.BAR3 = value;
+				break;
+			case 4:
+				registers.BAR4 = value;
+				break;
+			case 5:
+				registers.BAR5 = value;
+				break;
+		}
 }
 
 /*void PCIDevice::write_reg_byte(io_addr addr, uint8_t val){
-
 }
-
 void PCIDevice::write_reg_word(io_addr addr, uint16_t val){
-
 }
 void PCIDevice::write_reg_long(io_addr addr, uint32_t val){
-
 }
 uint8_t PCIDevice::read_reg_byte(io_addr addr){
-
 }
 uint16_t PCIDevice::read_reg_word(io_addr addr){
-
 }
 uint32_t PCIDevice::read_reg_long(io_addr addr){
-
 }*/

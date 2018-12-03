@@ -2,28 +2,61 @@
 #define PCIDEVICE_H
 #include "IODevice.h"
 #include <stdint.h>
+#include <iostream>
+#include "../backend/ConsoleLog.h"
 
-//TODO bar is 32 bit register
-typedef uint16_t io_addr;
+extern ConsoleLog& logg;
+
+struct deviceRegister{
+	uint16_t vendorID;
+	uint16_t deviceID;
+
+	uint16_t command;
+	uint16_t status;
+
+	//uint8_t revisionID;
+	//uint8_t classCode[3];
+	uint32_t classCode;
+
+	uint8_t cacheLineSize;
+	uint8_t latencyTimer;
+	uint8_t headerType;
+	uint8_t BIST;
+
+	uint32_t BAR0;
+	uint32_t BAR1;
+	uint32_t BAR2;
+	uint32_t BAR3;
+	uint32_t BAR4;
+	uint32_t BAR5;
+
+	uint32_t carbusCISPointer;
+
+	uint16_t subsystemVendorID;
+	uint16_t subsystemID;			
+
+	uint32_t expansionROMBaseAddress;
+
+	uint8_t capabilitiesPointer;
+	uint8_t reserved[7];
+
+	uint8_t interruptLine;
+	uint8_t interruptPIN;
+	uint8_t minGrant;
+	uint8_t maxLatency;
+};//__attribute__((packed));
 
 class PCIDevice : public IODevice {
-
-	//TODO: it's needed a struct packed to emulate all the configuration space
 	private:
-		uint16_t vendorID;
-		uint16_t deviceID;
-		uint32_t classCode;
-		io_addr bar[6];
-	
+		deviceRegister registers;
 	public:
 		PCIDevice(uint16_t vendorID, uint16_t deviceID);
 		PCIDevice(uint16_t vendorID, uint16_t deviceID,uint32_t classCode);
 		uint16_t getVendorID();
 		uint16_t getDeviceID();
 		uint32_t getClassCode();
-		io_addr getBar(uint8_t index);
-		void 	 setBar(io_addr value,uint8_t index);
-
+		uint32_t  getBar(uint8_t index);
+		void 	 setBar(uint32_t  value,uint8_t index);
 };
 
 #endif
