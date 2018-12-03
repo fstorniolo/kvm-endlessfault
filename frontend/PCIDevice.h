@@ -7,16 +7,15 @@
 
 extern ConsoleLog& logg;
 
-struct deviceRegister{
+struct deviceRegisters{
 	uint16_t vendorID;
 	uint16_t deviceID;
 
 	uint16_t command;
 	uint16_t status;
 
-	//uint8_t revisionID;
-	//uint8_t classCode[3];
-	uint32_t classCode;
+	uint8_t revisionID;
+	uint8_t classCode[3];
 
 	uint8_t cacheLineSize;
 	uint8_t latencyTimer;
@@ -44,11 +43,11 @@ struct deviceRegister{
 	uint8_t interruptPIN;
 	uint8_t minGrant;
 	uint8_t maxLatency;
-};//__attribute__((packed));
+}__attribute__((packed));
 
 class PCIDevice : public IODevice {
 	private:
-		deviceRegister registers;
+		deviceRegisters registers;
 	public:
 		PCIDevice(uint16_t vendorID, uint16_t deviceID);
 		PCIDevice(uint16_t vendorID, uint16_t deviceID,uint32_t classCode);
@@ -57,6 +56,13 @@ class PCIDevice : public IODevice {
 		uint32_t getClassCode();
 		uint32_t  getBar(uint8_t index);
 		void 	 setBar(uint32_t  value,uint8_t index);
+
+		void write_reg_byte(uint32_t offset, uint8_t val);
+		void write_reg_word(uint32_t offset, uint16_t val);
+		void write_reg_long(uint32_t offset, uint32_t val);
+		uint8_t read_reg_byte(uint32_t offset);
+		uint16_t read_reg_word(uint32_t offset);
+		uint32_t read_reg_long(uint32_t offset);
 };
 
 #endif
