@@ -57,12 +57,12 @@ class PCIDevice : public IODevice {
 		uint32_t  getBar(uint8_t index);
 		void 	 setBar(uint32_t  value,uint8_t index);
 
-		void write_reg_byte(uint32_t offset, uint8_t val);
-		void write_reg_word(uint32_t offset, uint16_t val);
-		void write_reg_long(uint32_t offset, uint32_t val);
-		uint8_t read_reg_byte(uint32_t offset);
-		uint16_t read_reg_word(uint32_t offset);
-		uint32_t read_reg_long(uint32_t offset);
+		void write_reg_byte_PCI(uint32_t offset, uint8_t val);
+		void write_reg_word_PCI(uint32_t offset, uint16_t val);
+		void write_reg_long_PCI(uint32_t offset, uint32_t val);
+		uint8_t read_reg_byte_PCI(uint32_t offset);
+		uint16_t read_reg_word_PCI(uint32_t offset);
+		uint32_t read_reg_long_PCI(uint32_t offset);
 };
 
 #endif
