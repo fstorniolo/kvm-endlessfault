@@ -807,8 +807,8 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					/*logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")
-						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << endl;*/
+					logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")
+						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << endl;
 
 					break;
 				}
