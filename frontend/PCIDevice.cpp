@@ -7,33 +7,23 @@ PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID, uint32_t classCode) {
 	registers.classCode[0] = (uint8_t)classCode;
 	registers.classCode[1] = (uint8_t)(classCode >> 8);
 	registers.classCode[2] = (uint8_t)(classCode >> 16);
-	registers.BAR0 = 0;
-	registers.BAR1 = 0;
-	registers.BAR2 = 0;
-	registers.BAR3 = 0;
-	registers.BAR4 = 0;
-	registers.BAR5 = 0;
+	for(int i = 0; i<6; i++)
+		registers.BAR[i] = 0;	
 }
 
 PCIDevice::PCIDevice(uint16_t vendorID, uint16_t deviceID) {
 	registers.vendorID = vendorID;
 	registers.deviceID = deviceID;
-	registers.BAR0 = 0;
-	registers.BAR1 = 0;
-	registers.BAR2 = 0;
-	registers.BAR3 = 0;
-	registers.BAR4 = 0;
-	registers.BAR5 = 0;
+	for(int i = 0; i<6; i++)
+		registers.BAR[i] = 0;
 }
 
 uint16_t PCIDevice::getVendorID() {
-	return read_reg_word_PCI(0);    // <-- TEST
-	//return registers.vendorID; < --CORRECT
+	return registers.vendorID;
 }
 
 uint16_t PCIDevice::getDeviceID() {
-	return read_reg_word_PCI(2);  // <-- TEST
-	//return registers.deviceID; < --CORRECT
+	return registers.deviceID;
 }
 
 uint32_t PCIDevice::getClassCode() {	
@@ -42,91 +32,71 @@ uint32_t PCIDevice::getClassCode() {
 	return fullClassCode;
 }
 
-uint32_t PCIDevice::getBar(uint8_t index) {
-	switch (index){
-		case 0:
-			return registers.BAR0;
-		case 1:
-			return registers.BAR1;
-		case 2:
-			return registers.BAR2;
-		case 3:
-			return registers.BAR3;
-		case 4:
-			return registers.BAR4;
-		case 5:
-			return registers.BAR5;
-		default:
-			return 0; // ITS CORRECT???
+uint32_t PCIDevice::getBar(uint8_t index) {	
+	if(index < 0 || index > 5){
+		logg << "Out of bound PCIDevice::getBar with index: " << index << endl;
+		return -1; //Out of bound
 	}
+	return registers.BAR[index];
 }
 
 void PCIDevice::setBar(uint32_t value,uint8_t index) {
-		switch (index){
-			case 0:
-				registers.BAR0 = value;
-				break;
-			case 1:
-				registers.BAR1 = value;
-				break;
-			case 2:
-				registers.BAR2 = value;
-				break;
-			case 3:
-				registers.BAR3 = value;
-				break;
-			case 4:
-				registers.BAR4 = value;
-				break;
-			case 5:
-				registers.BAR5 = value;
-				break;
-			default:
-				return;
-		}
+	if(index < 0 || index > 5){
+		logg << "Out of bound PCIDevice::setBar with index: " << index << endl;
+		return; //Out of bound
+	}
+	registers.BAR[index] = value;
 }
 
-void PCIDevice::write_reg_byte_PCI(uint32_t offset, uint8_t val){ //offset, 1 = 1byte
-	if(offset*8 + 8 > 255)
+// next function can read/write in a certain offset inside device registers, offset in byte
+
+void PCIDevice::write_reg_byte_PCI(uint32_t offset, uint8_t val) { 
+	if(offset < 0 || offset + 1 > sizeof(deviceRegisters)){
+		logg << "Out of bound PCIDevice::write_reg_byte_PCI with offset: " << offset << endl;
 		return; //Out of bound
+	}
 	uint8_t *regs = (uint8_t*)&registers;
 	*((uint8_t*)(regs + offset)) = val;
 }
 
-void PCIDevice::write_reg_word_PCI(uint32_t offset, uint16_t val){
-	if(offset*8 + 16 > 255)
+void PCIDevice::write_reg_word_PCI(uint32_t offset, uint16_t val) {
+	if(offset < 0 || offset + 2 > sizeof(deviceRegisters)){
+		logg << "Out of bound PCIDevice::write_reg_word_PCI with offset: " << offset << endl;
 		return; //Out of bound
+	}
 	uint8_t *regs = (uint8_t*)&registers;
 	*((uint16_t*)(regs + offset)) = val;
 }
 
-void PCIDevice::write_reg_long_PCI(uint32_t offset, uint32_t val){
-	if(offset*8 + 32 > 255)
+void PCIDevice::write_reg_long_PCI(uint32_t offset, uint32_t val) {
+	if(offset < 0 || offset + 4 > sizeof(deviceRegisters)){
+		logg << "Out of bound PCIDevice::write_reg_long_PCI with offset: " << offset << endl;
 		return; //Out of bound
+	}
 	uint8_t *regs = (uint8_t*)&registers;
 	*((uint32_t*)(regs + offset)) = val;
 }
 
-uint8_t PCIDevice::read_reg_byte_PCI(uint32_t offset){ 
-	if(offset*8 + 8 > 255){
-		logg << "Out of bound read_reg_byte PCIDevice with offset: " << offset << endl;
+uint8_t PCIDevice::read_reg_byte_PCI(uint32_t offset) { 
+	if(offset < 0 || offset + 1 > sizeof(deviceRegisters)){
+		logg << "Out of bound PCIDevice::read_reg_byte_PCI with offset: " << offset << endl;
 		return 0; //Out of bound
 	}
 	uint8_t *regs = (uint8_t*)&registers;
 	return *(regs + offset);
 }
-uint16_t PCIDevice::read_reg_word_PCI(uint32_t offset){ // CAMPIONE SU CUI FACCIO TEST
-	if(offset*8 + 16 > 255){
-		logg << "Out of bound read_reg_word PCIDevice with offset: " << offset << endl;
+uint16_t PCIDevice::read_reg_word_PCI(uint32_t offset) { // CAMPIONE SU CUI FACCIO TEST
+	if(offset < 0 || offset + 2 > sizeof(deviceRegisters)){
+		logg << "Out of bound PCIDevice::read_reg_word_PCI with offset: " << offset << endl;
 		return 0; //Out of bound
 	}
 	uint8_t *regs = (uint8_t*)&registers;
 	uint16_t tmp = *((uint16_t*)(regs + offset));
 	return tmp;
 }
-uint32_t PCIDevice::read_reg_long_PCI(uint32_t offset){
-	if(offset*8 + 32 > 255){
-		logg << "Out of bound read_reg_long PCIDevice with offset: " << offset << endl;
+uint32_t PCIDevice::read_reg_long_PCI(uint32_t offset) {
+	if(offset < 0 || offset + 4 > sizeof(deviceRegisters)){
+		logg << "Out of bound read_reg_long_PCI with offset: " << offset << endl;
 		return 0; //Out of bound
 	}
 	uint8_t *regs = (uint8_t*)&registers;
