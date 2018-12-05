@@ -174,6 +174,9 @@ void Bootloader::setup_page_tables(kvm_sregs *sregs)
 	pdpt[3] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_addr);
 	pd[502] = PDE64_PRESENT | PDE64_RW | PDE64_USER | PDE64_PS | 0xfec00000;
 
+	pdpt[3] = PDE64_PRESENT | PDE64_RW | PDE64_USER | (pd_addr);
+	pd[503] = PDE64_PRESENT | PDE64_RW | PDE64_USER | PDE64_PS | 0xfee00000;
+
 	sregs->cr3 = pml4_addr;
 
 	/*sregs->cr3 = pml4_addr;

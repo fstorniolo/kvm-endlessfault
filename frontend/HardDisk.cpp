@@ -101,6 +101,7 @@ uint16_t HardDisk::read_reg_word(io_addr addr)
 }
 
 void HardDisk::process_cmd(){
+
 	switch(CMD) {
 		
 		//write
@@ -126,6 +127,10 @@ void HardDisk::process_cmd(){
 	lba = compute_lba();
 	//#ifdef DEBUG_LOG
 	logg << "print lba: " << lba << endl;
+		uint16_t irq = 2;
+		//logg << "print di irq: " << std::bitset<16>(irq) << endl;
+		sendInterrupt(irq);
+
 	//#endif
 	sector_numbers_cmd = SCR;
 
@@ -140,6 +145,7 @@ void HardDisk::write_BR_register(uint16_t val){
 		//call backend function sending (lba + current_sector_number++) as parameter
 		current_position = 0;
 		disk_manager.write(internal_buffer,lba + current_sector_number++);
+
 		//clean status
 		STS &= ~BUSY_MASK;
 		STS |= DRQ_MASK;
@@ -156,9 +162,11 @@ uint16_t HardDisk::read_BR_register(){
 	STS |= BUSY_MASK;
 	uint16_t *new_buffer;
 
+	logg << "reading in BR with current_position: " << current_position << endl;
 	if(current_position == 0){
 		disk_manager.read(internal_buffer,lba + current_sector_number++);
 		new_buffer = reinterpret_cast<uint16_t*>(&internal_buffer[0]);
+
 	}
 
 	BR = new_buffer[current_position];

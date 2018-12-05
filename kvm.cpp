@@ -7,6 +7,8 @@
 #include <cstring>
 #include <sys/mman.h>
 #include <signal.h>
+#include <bitset>
+
 #include "frontend/IODevice.h"
 #include "frontend/PCIDevice.h"
 
@@ -22,6 +24,7 @@
 #include "backend/ConsoleOutput.h"
 #include "frontend/vgaController.h"
 #include "INIReader.h"
+#include "kvm.h"
 
 #include "frontend/pci_host.h"
 
@@ -59,6 +62,10 @@ bool debug_mode;
 
 // global logger
 ConsoleLog& logg = *ConsoleLog::getInstance();
+
+int vm_fd, kvm_fd, vcpu_fd;
+kvm_run* kr;
+
 
 // emulated keyboard (frontend)
 keyboard keyb;
@@ -144,6 +151,8 @@ void initIO()
 	atexit([](){endIO(0);});
 	signal(SIGINT, endIO);
 }
+
+
 
 
 // function called on HLT vm program to obtain a program result
@@ -237,6 +246,62 @@ void trace_user_program(int vcpu_fd, kvm_run *kr) {
 	logg << "\tpending: " << (unsigned int)events.nmi.pending << endl;
 	logg << "\tmasked: " << (unsigned int)events.nmi.masked << endl;
 	logg << "\tpad: " << (unsigned int)events.nmi.pad << endl;
+}
+
+void trace_ioapic(int vm_fd,uint16_t line_id = 2) {
+	kvm_irqchip kirqchip;
+	kirqchip.chip_id = 2;
+	if(ioctl(vm_fd,KVM_GET_IRQCHIP,&kirqchip) != 0){
+		logg << "KVM_GET_IRQCHIP error: " << strerror(errno) << endl;
+		return;
+	}
+
+	logg << "APIC state dump: " << endl;
+
+	logg << "\tbase_address: "<< kirqchip.chip.ioapic.base_address << endl;
+	logg << "\tioregsel: "<< kirqchip.chip.ioapic.ioregsel << endl;
+	logg << "\tid: "<< kirqchip.chip.ioapic.id << endl;
+	logg << "\tirr: "<< kirqchip.chip.ioapic.irr << endl;
+	logg << "\tpad: "<< kirqchip.chip.ioapic.pad << endl;
+
+	//int line_id = 14;
+
+	logg << "\tvector: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.vector << endl;
+	logg << "\tdelivery_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.delivery_mode << endl;
+	logg << "\tdest_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.dest_mode << endl;
+	logg << "\tdelivery_status: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.delivery_status << endl;
+	logg << "\tpolarity: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.polarity << endl;
+	logg << "\tremote_irr: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.remote_irr << endl;
+	logg << "\ttrig_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.trig_mode << endl;
+	logg << "\tmask: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.mask << endl;
+}
+
+void sendInterrupt(uint16_t irq_id){
+	kvm_irq_level kvm_irq;
+	//memset(&kvm_irq, 0, sizeof(kvm_irq));
+	/*uint32_t irq = 0x01000000;
+	logg << "prova irq_id: " << std::bitset<16>(irq_id) << endl;
+	logg << "prova irq_type: " << std::bitset<32>(irq) << endl;
+	irq |= (uint32_t)irq_id;
+	logg << "prova irq: " << std::bitset<32>(irq) << endl;*/
+	trace_ioapic(vm_fd,irq_id);
+
+	//kvm_irq.irq = (uint32_t)irq_id;
+	kvm_irq.irq = irq_id;
+	kvm_irq.level = 1;
+	//logg << "prova irq: " << std::bitset<32>(kvm_irq.irq) << endl;
+
+	if(ioctl(vm_fd,KVM_IRQ_LINE,&kvm_irq) != 0){
+		logg << "interrupt has not been injected. Error: " << strerror(errno) << endl;
+		return;
+	}
+	else
+	{
+		logg << "interrupt has been injected" << endl;
+	}
+
+	//trace_user_program(vcpu_fd, kr);
+	trace_ioapic(vm_fd,kvm_irq.irq);
 }
 
 void dump_memory(uint64_t offset, int size)
@@ -437,7 +502,7 @@ int main(int argc, char **argv)
 	/* the first thing to do is to open the /dev/kvm pseudo-device,
 	 * obtaining a file descriptor.
 	 */
-	int kvm_fd = open("/dev/kvm", O_RDWR);
+	kvm_fd = open("/dev/kvm", O_RDWR);
 	if (kvm_fd < 0) {
 		/* as usual, a negative value means error */
 		cout << "/dev/kvm: " << strerror(errno) << endl;
@@ -451,7 +516,7 @@ int main(int argc, char **argv)
 	 * The ioctl() returns us a new file descriptor, which
 	 * we can then use to interact with the vm.
 	 */
-	int vm_fd = ioctl(kvm_fd, KVM_CREATE_VM, 0);
+	vm_fd = ioctl(kvm_fd, KVM_CREATE_VM, 0);
 	if (vm_fd < 0) {
 		cout << "create vm: " << strerror(errno) << endl;
 		return 5;
@@ -514,7 +579,7 @@ int main(int argc, char **argv)
 	 * interact with the vcpu. Note that we can have several
 	 * vcpus, to emulate a multi-processor machine.
 	 */
-	int vcpu_fd = ioctl(vm_fd, KVM_CREATE_VCPU, 0);
+	vcpu_fd = ioctl(vm_fd, KVM_CREATE_VCPU, 0);
 	if (vcpu_fd < 0) {
 		cout << "create vcpu: " << strerror(errno) << endl;
 		return 1;
@@ -566,7 +631,7 @@ int main(int argc, char **argv)
 	}
 
 	/* and now the mmap() */
-	kvm_run *kr = static_cast<kvm_run *>(mmap(
+			kr = static_cast<kvm_run *>(mmap(
 			/* let the kernel  choose the address */
 			NULL,
 			/* the size we obtained above */
@@ -621,6 +686,8 @@ int main(int argc, char **argv)
 	 * appropriate action (e.g., emulate I/O) and re-enter
 	 * the vm, by issuing another KVM_RUN ioctl().
 	 */
+
+	trace_ioapic(vm_fd);
 
 	bool continue_run = true;
 	while(continue_run)
@@ -748,11 +815,11 @@ int main(int argc, char **argv)
 				break;
 			}
 			case KVM_EXIT_MMIO:
-				/*logg << "kvm: unhandled KVM_EXIT_MMIO"
+				logg << "kvm: unhandled KVM_EXIT_MMIO"
 						<< " address=" << std::hex << (uint64_t)kr->mmio.phys_addr
 						<< " len=" << (uint32_t)kr->mmio.len
 						<< " data=" << (uint32_t)((kr->mmio.data[3] << 24) | (kr->mmio.data[2] << 16) | (kr->mmio.data[1] << 8) | kr->mmio.data[0])
-						<< " is_write=" << (short)kr->mmio.is_write << endl;*/
+						<< " is_write=" << (short)kr->mmio.is_write << endl;
 				//trace_user_program(vcpu_fd, kr);
 				//return 1;
 				break;
