@@ -12,7 +12,7 @@ pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected
 	for(uint32_t i=0;i<N_DEVICES;i++)
 		devices[i] = NULL;
 
-	//it must to be changed
+	//it must  be changed
 
 	PCIDevice *temp = connected_PCI_devices[0];
 

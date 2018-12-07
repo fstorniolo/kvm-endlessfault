@@ -264,8 +264,6 @@ void trace_ioapic(int vm_fd,uint16_t line_id = 2) {
 	logg << "\tirr: "<< kirqchip.chip.ioapic.irr << endl;
 	logg << "\tpad: "<< kirqchip.chip.ioapic.pad << endl;
 
-	//int line_id = 14;
-
 	logg << "\tvector: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.vector << endl;
 	logg << "\tdelivery_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.delivery_mode << endl;
 	logg << "\tdest_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.dest_mode << endl;
@@ -274,22 +272,43 @@ void trace_ioapic(int vm_fd,uint16_t line_id = 2) {
 	logg << "\tremote_irr: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.remote_irr << endl;
 	logg << "\ttrig_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.trig_mode << endl;
 	logg << "\tmask: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.mask << endl;
+
+	//int line_id = 14;
+	for(int i=0; i<=1; i++) {
+		kirqchip.chip_id = i;
+		if(ioctl(vm_fd,KVM_GET_IRQCHIP,&kirqchip) != 0){
+			logg << "KVM_GET_IRQCHIP error: " << strerror(errno) << endl;
+			return;
+		}
+		logg << "PIC" << i << endl;
+		logg << "\tlast_irr: " << (unsigned int)kirqchip.chip.pic.last_irr << endl;	/* edge detection */
+		logg << "\tirr: " << (unsigned int)kirqchip.chip.pic.irr << endl;		/* interrupt request register */
+		logg << "\timr: " << (unsigned int)kirqchip.chip.pic.imr << endl;		/* interrupt mask register */
+		logg << "\tisr: " << (unsigned int)kirqchip.chip.pic.isr << endl;		/* interrupt service register */
+		logg << "\tpriority_add: " << (unsigned int)kirqchip.chip.pic.priority_add << endl;	/* highest irq priority */
+		logg << "\tirq_base: " << (unsigned int)kirqchip.chip.pic.irq_base << endl;
+		logg << "\tread_reg_select: " << (unsigned int)kirqchip.chip.pic.read_reg_select << endl;
+		logg << "\tpoll: " << (unsigned int)kirqchip.chip.pic.poll << endl;
+		logg << "\tspecial_mask: " << (unsigned int)kirqchip.chip.pic.special_mask << endl;
+		logg << "\tinit_state: " << (unsigned int)kirqchip.chip.pic.init_state << endl;
+		logg << "\tauto_eoi: " << (unsigned int)kirqchip.chip.pic.auto_eoi << endl;
+		logg << "\trotate_on_auto_eoi: " << (unsigned int)kirqchip.chip.pic.rotate_on_auto_eoi << endl;
+		logg << "\tspecial_fully_nested_mode: " << (unsigned int)kirqchip.chip.pic.special_fully_nested_mode << endl;
+		logg << "\tinit4: " << (unsigned int)kirqchip.chip.pic.init4 << endl;		/* true if 4 byte init */
+		logg << "\telcr: " << (unsigned int)kirqchip.chip.pic.elcr << endl;		/* PIIX edge/trigger selection */
+		logg << "\telcr_mask: " << (unsigned int)kirqchip.chip.pic.elcr_mask << endl;
+
+	}
+
 }
 
-void sendInterrupt(uint16_t irq_id){
+void set_IRQline(uint16_t irq_id,uint16_t level){
 	kvm_irq_level kvm_irq;
-	//memset(&kvm_irq, 0, sizeof(kvm_irq));
-	/*uint32_t irq = 0x01000000;
-	logg << "prova irq_id: " << std::bitset<16>(irq_id) << endl;
-	logg << "prova irq_type: " << std::bitset<32>(irq) << endl;
-	irq |= (uint32_t)irq_id;
-	logg << "prova irq: " << std::bitset<32>(irq) << endl;*/
+	logg << "STAMPA PRIMA INIEZIONE" << endl;
 	trace_ioapic(vm_fd,irq_id);
 
-	//kvm_irq.irq = (uint32_t)irq_id;
 	kvm_irq.irq = irq_id;
-	kvm_irq.level = 1;
-	//logg << "prova irq: " << std::bitset<32>(kvm_irq.irq) << endl;
+	kvm_irq.level = level;
 
 	if(ioctl(vm_fd,KVM_IRQ_LINE,&kvm_irq) != 0){
 		logg << "interrupt has not been injected. Error: " << strerror(errno) << endl;
@@ -301,6 +320,7 @@ void sendInterrupt(uint16_t irq_id){
 	}
 
 	//trace_user_program(vcpu_fd, kr);
+	logg << "STAMPA DOPO INIEZIONE con livello: " << (unsigned int)level <<  endl;
 	trace_ioapic(vm_fd,kvm_irq.irq);
 }
 

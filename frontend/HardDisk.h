@@ -1,6 +1,6 @@
 #ifndef HARD_DISK_H
 #define HARD_DISK_H
-
+#define INT_IDE_HDD 14
 
 #include "IODevice.h"
 #include "../backend/DiskManager.h"
@@ -50,6 +50,8 @@ private:
 	bool interrupt_enabled;
 
 	uint8_t internal_buffer[BLOCK_SIZE_BYTE];
+	uint16_t *new_buffer;
+
 	int current_position;
 	int sector_numbers_cmd;
 	int current_sector_number;
@@ -57,7 +59,7 @@ private:
 	uint32_t num_sector_hdd;
 	DiskManager disk_manager;
 
-	//bool interrupt_raised;
+	bool interrupt_raised;
 
 
 private:
@@ -66,6 +68,7 @@ private:
 	uint16_t read_BR_register();
 	void clean_all_registers();
 	uint32_t compute_lba();
+	void read_from_backend();
 
 public:
 	HardDisk(uint32_t num_sectors);
@@ -75,8 +78,6 @@ public:
 	void write_reg_word(io_addr addr, uint16_t val);
 	uint16_t read_reg_word(io_addr addr);
 
-	// serve al backend per pushare eventi di inserimento come handler
-	//void insert_keycode_event(uint8_t keycode);
 };
 
 #endif
