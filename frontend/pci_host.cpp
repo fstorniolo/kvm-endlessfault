@@ -16,12 +16,12 @@ pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected
 		if(connected_PCI_devices[i] == nullptr)
 			continue;
 
+
 		devices[connected] = connected_PCI_devices[i];
 		connected++;
 	}
 
 	
-	//PER FILIPPO, CREDO VADA FATTO ALTROVE
 	//After implementation move this code in kvm.cpp after constructor of PCI Host
 
 	for(i=0;i<connected;i++){
