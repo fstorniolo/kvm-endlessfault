@@ -8,7 +8,7 @@ extern ConsoleLog& logg;
 
 #define APIC_VENDOR_ID 0x8086
 #define APIC_DEVICE_ID 0x7000
-//#define ATA_CLASS_ID  0x0101	
+#define APIC_CLASS_NAME  0x123400	
 
 
 class PCI_APIC : public PCIDevice {

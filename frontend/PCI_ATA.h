@@ -9,7 +9,7 @@ extern ConsoleLog& logg;
 
 #define ATA_VENDOR_ID 0x7777
 #define ATA_DEVICE_ID 0x8888
-#define ATA_CLASS_ID  0x0101	
+#define ATA_CLASS_ID  0x010100	
 
 
 class PCI_ATA : public PCIDevice {
