@@ -79,7 +79,7 @@ uint8_t HardDisk::read_reg_byte(io_addr addr)
 		case CNL_addr: result = CNL; break;
 		case STS_addr: result = STS; 
 			if(interrupt_raised){
-				set_IRQline(2,0);
+				set_IRQline(INT_IDE_HDD,0);
 				interrupt_raised = false;
 			} 
 			 break;
@@ -164,7 +164,7 @@ void HardDisk::read_from_backend(){
 	if(interrupt_enabled)
 	{
 		logg << "invio set_IRQline" << endl;
-		set_IRQline(2,1);
+		set_IRQline(INT_IDE_HDD,1);
 		logg << "set_IRQline done " << endl;
 		interrupt_raised = true;
 	}
@@ -191,7 +191,7 @@ void HardDisk::write_BR_register(uint16_t val){
 		}
 		else{
 			if(interrupt_enabled){
-				set_IRQline(2,1);
+				set_IRQline(INT_IDE_HDD,1);
 				interrupt_raised = true;
 			}
 		}

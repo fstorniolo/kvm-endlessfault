@@ -109,12 +109,6 @@ void pci_host::write_reg_byte(io_addr addr, uint8_t val)
 	}
 
 	tmp->write_reg_byte_PCI(offset_number + addr-CDP_addr,val);
-
-	/*switch(addr) {
-		case CAP_addr: break;
-		case CDP_addr: break;			//TODO
-	}*/
-
 }
 
 

@@ -38,6 +38,8 @@ struct deviceRegisters{
 	uint8_t interruptPIN;
 	uint8_t minGrant;
 	uint8_t maxLatency;
+
+	uint32_t filler[32];
 }__attribute__((packed));
 
 class PCIDevice : public IODevice {
