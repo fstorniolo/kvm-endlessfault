@@ -184,16 +184,15 @@ void HardDisk::write_BR_register(uint16_t val){
 		//clean status
 		STS &= ~BUSY_MASK;
 		STS |= DRQ_MASK;
+
 		if(sector_numbers_cmd == current_sector_number){
 			//clean status register 
 			STS &= ~(DRQ_MASK);
 		//	return;
-		}
-		else{
-			if(interrupt_enabled){
-				set_IRQline(INT_IDE_HDD,1);
+		} 
+		if(interrupt_enabled){
+			set_IRQline(INT_IDE_HDD,1);
 				interrupt_raised = true;
-			}
 		}
 
 	}
