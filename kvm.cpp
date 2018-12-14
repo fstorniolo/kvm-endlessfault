@@ -625,6 +625,18 @@ int main(int argc, char **argv)
 	//logg << "base address io apic: " << irqchip.chip_id << endl;	
 
 
+	logg << "Set klapic: " << endl;
+
+	struct kvm_lapic_state klapic;
+	memset(&klapic, 0, sizeof(klapic));
+	klapic.regs[0xF1] = 1 ;
+
+	if(ioctl(vcpu_fd, KVM_SET_LAPIC, &klapic)<0){
+		logg << " klapic set error: " << strerror(errno) << endl;
+		return 1;
+	}
+
+
 	// start debug server if enabled
 	if( reader.GetBoolean("debug-server", "enable", false) ) {
 		try {
