@@ -34,7 +34,7 @@ uint8_t keyboard::read_reg_byte(io_addr addr)
 			result = RBR;
 			// FI è aggiornato in base a se ci sono ancora keycode
 			// da prelevare dal buffer
-			update_FI();
+			update_FI(false);
 			break;
 		case STR_addr:
 			result= STR;
@@ -55,10 +55,19 @@ void keyboard::process_cmd()
 			else
 				enabled = true;
 
-			if(TBR & 0x01)	// bit 0: abilitazione interruzioni
+
+			if(TBR & 0x01){	// bit 0: abilitazione interruzioni
 				interrupt_enabled = true;
-			else
+
+				if(buffer_element_count != 0 && !interrupt_raised){						//interrupt accodati
+					set_IRQline(INT_KEYBOARD,1);
+					interrupt_raised = true;
+				}
+
+			} else{
 				interrupt_enabled = false;
+			}
+
 		break;
 	}
 }
@@ -76,14 +85,32 @@ void keyboard::next_RBR()
 	}
 }
 
-void keyboard::update_FI()
+void keyboard::update_FI(bool insert)
 {
+
+	if(!insert){								//rispondo all'interruzione
+		set_IRQline(INT_KEYBOARD,0);
+		interrupt_raised = false;
+	}
+
 	// se abbiamo caratteri nel buffer alziamo FI
-	if(buffer_element_count != 0)
+	if(buffer_element_count != 0){
 		STR |= FI_MASK;
+		
+		if(interrupt_enabled){
+			set_IRQline(INT_KEYBOARD,1);
+			interrupt_raised = true;
+		}
+	}
 	// altrimenti abbassiamolo
-	else
+	else {
 		STR &= ~FI_MASK;
+		if(interrupt_raised){
+			set_IRQline(INT_KEYBOARD,0);
+			interrupt_raised = false;
+		}
+
+	}
 }
 
 void keyboard::insert_keycode_event(uint8_t keycode)
@@ -115,7 +142,7 @@ void keyboard::insert_keycode_event(uint8_t keycode)
 
 	// alziamo il bit FI, ma lo deleghiamo a update_FI() per gestire eventuali
 	// eventi di interruzione
-	update_FI();
+	update_FI(true);
 
 err:
 	pthread_mutex_unlock(&mutex);
