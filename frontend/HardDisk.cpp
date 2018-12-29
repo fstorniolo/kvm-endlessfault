@@ -8,7 +8,7 @@ HardDisk::HardDisk(uint32_t num_sector) :
 					BR(0),SCR(0),SNR(0),CNH(0),CNL(0),HND(0),ERR(0),STS(0),CMD(0),
 					DCR(0x02),DAR(0),ASR(0),interrupt_enabled(false),
 					current_position(0), sector_numbers_cmd(0),current_sector_number(0),lba(0),
-					num_sector_hdd(num_sector),disk_manager(num_sector),interrupt_raised(false){};
+					num_sector_hdd(num_sector),disk_manager(num_sector),interrupt_raised(false),DMA(false){};
 
 
 void HardDisk::write_reg_byte(io_addr addr, uint8_t val)
@@ -134,7 +134,7 @@ void HardDisk::process_cmd(){
 		case 0x30:
 			STS |= DRQ_MASK;
 			STS &= ~BUSY_MASK;
-
+			DMA = false;
 
 			break;
 		//read
@@ -142,10 +142,28 @@ void HardDisk::process_cmd(){
 			STS &= ~BUSY_MASK;
 			//call backend function sending (lba + current_sector_number++, internal_buffer) as parameters
 			STS |= DRQ_MASK;
+			DMA = false;
 			read_from_backend();
 
 			break;
-		
+
+		case 0xC8:			//read DMA
+			STS |= DRQ_MASK;
+			STS &= ~BUSY_MASK;
+			DMA = true;
+			read_from_backend();
+			break;
+
+		case 0xCA:			// write DMA
+			STS &= ~BUSY_MASK;
+			//call backend function sending (lba + current_sector_number++, internal_buffer) as parameters
+			STS |= DRQ_MASK;
+			DMA = true;
+
+
+			break;
+
+
 		//we compute the lba value and we store it.
 		//when someone will use the disk, even if he wants to read or write a number n of sectors, 
 		//he won't write again the current lba in the four registers.
@@ -192,7 +210,7 @@ void HardDisk::write_BR_register(uint16_t val){
 		} 
 		if(interrupt_enabled){
 			set_IRQline(INT_IDE_HDD,1);
-				interrupt_raised = true;
+			interrupt_raised = true;
 		}
 
 	}
@@ -237,3 +255,4 @@ uint32_t HardDisk::compute_lba(){
 	lba &= 0x0FFFFFFF;
 	return lba;
 }
+

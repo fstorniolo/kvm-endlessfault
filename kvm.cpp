@@ -327,6 +327,12 @@ void set_IRQline(uint16_t irq_id,uint16_t level){
 	trace_ioapic(vm_fd,kvm_irq.irq);
 }
 
+void set_ATA_PCI_line(uint16_t irq_id,uint16_t level){
+	ata_bridge.sendInterrupt(irq_id,level);
+
+}
+
+
 void dump_memory(uint64_t offset, int size)
 {
 	logg << endl << "================== Memory Dump (0x" << std::hex << (unsigned long)offset << " size " << std::dec << size <<" B) ==================" << endl;

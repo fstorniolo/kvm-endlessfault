@@ -4,6 +4,7 @@
 #include "PCIDevice.h"
 #include "HardDisk.h"
 #include "../backend/ConsoleLog.h"
+#include "../kvm.h"
 
 extern ConsoleLog& logg;
 
@@ -49,6 +50,7 @@ class PCI_ATA : public PCIDevice {
 		uint32_t read_reg_long(io_addr addr);
 		
 		void setVmem(uint8_t* addr);
+		void sendInterrupt(uint16_t irq, uint16_t level);
 
 };
 

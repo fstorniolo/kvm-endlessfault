@@ -7,7 +7,6 @@
 #include "../backend/ConsoleLog.h"
 #include "../kvm.h"
 
-
 extern ConsoleLog& logg;
 
 
@@ -60,6 +59,7 @@ private:
 	DiskManager disk_manager;
 
 	bool interrupt_raised;
+	bool DMA;
 
 
 private:
@@ -77,6 +77,7 @@ public:
 	uint8_t read_reg_byte(io_addr addr);
 	void write_reg_word(io_addr addr, uint16_t val);
 	uint16_t read_reg_word(io_addr addr);
+
 
 };
 
