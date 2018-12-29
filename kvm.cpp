@@ -131,11 +131,14 @@ void initIO()
 	com2 = new serial_port(0x2f8, logg);
 	com3 = new serial_port(0x3e8, logg);
 	com4 = new serial_port(0x2e8, logg);
+
+	ata_bridge.setVmem(guest_physical_memory);
+
+
 	connected_PCI_devices[0] = &ata_bridge;
 	connected_PCI_devices[1] = &apic_bridge;
 
 	pci = new pci_host(connected_PCI_devices);
-
 
 
 	vga.setVMem((uint16_t*)(guest_physical_memory + 0xB8000)); // set text mode video memory offset
@@ -836,7 +839,33 @@ int main(int argc, char **argv)
 							connected_PCI_devices[0]->write_reg_byte(kr->io.port, *io_param);
 					else if(kr->io.direction == KVM_EXIT_IO_IN)
 							*io_param = connected_PCI_devices[0]->read_reg_byte(kr->io.port);
+
+				} else if(kr->io.port >= connected_PCI_devices[0]->getBar(4) && kr->io.port <= connected_PCI_devices[0]->getBar(4)+4){			//BUS MASTERING
+
+					if(kr->io.size == 4){
+						if(kr->io.direction == KVM_EXIT_IO_OUT){
+								connected_PCI_devices[0]->write_reg_long(kr->io.port, *io_param_long);
+						}else if(kr->io.direction == KVM_EXIT_IO_IN){
+								*io_param_long = connected_PCI_devices[0]->read_reg_long(kr->io.port);
+						}
+					} else if(kr->io.size == 2){
+						if(kr->io.direction == KVM_EXIT_IO_OUT){
+								connected_PCI_devices[0]->write_reg_word(kr->io.port, *io_param_word);
+						}else if(kr->io.direction == KVM_EXIT_IO_IN){
+								*io_param_word = connected_PCI_devices[0]->read_reg_word(kr->io.port);
+						}
+					}else if(kr->io.size == 1){
+						if(kr->io.direction == KVM_EXIT_IO_OUT){
+								connected_PCI_devices[0]->write_reg_byte(kr->io.port, *io_param);
+						}else if(kr->io.direction == KVM_EXIT_IO_IN){
+								*io_param = connected_PCI_devices[0]->read_reg_byte(kr->io.port);
+						}
+					}
+
 				}
+
+
+
 				else
 				{
 					logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")

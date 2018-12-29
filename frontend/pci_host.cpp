@@ -26,8 +26,9 @@ pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected
 
 	for(i=0;i<connected;i++){
 		if(devices[i]->getClassCode() == 0x010100){				//PCI-ATA
-			devices[i]->setBar(0x01F0,0);
-			devices[i]->setBar(0x03F6,1);
+			devices[i]->setBar(0x01F0,0);						//HDD registers
+			devices[i]->setBar(0x03F6,1);						//HDD registers
+			devices[i]->setBar(0x0400,4);						//Bus mastering
 		}
 	}
 
