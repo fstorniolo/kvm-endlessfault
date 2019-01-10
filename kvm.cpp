@@ -7,8 +7,14 @@
 #include <cstring>
 #include <sys/mman.h>
 #include <signal.h>
+#include <bitset>
 
 #include "frontend/IODevice.h"
+#include "frontend/PCIDevice.h"
+
+#include "frontend/HardDisk.h"
+#include "frontend/PCI_ATA.h"
+#include "frontend/PCI_APIC.h"
 #include "frontend/keyboard.h"
 #include "frontend/serial_port.h"
 #include "backend/ConsoleLog.h"
@@ -18,6 +24,9 @@
 #include "backend/ConsoleOutput.h"
 #include "frontend/vgaController.h"
 #include "INIReader.h"
+#include "kvm.h"
+
+#include "frontend/pci_host.h"
 
 #include "gdbserver/gdbserver.h"
 
@@ -41,6 +50,8 @@ using namespace std;
  */
 #include <linux/kvm.h>
 
+#define DEVICES_ON_BUS  32
+
 
 // guest memory
 uint32_t GUEST_PHYSICAL_MEMORY_SIZE = 8*1024*1024; //default guest physical memory to 8MB
@@ -52,8 +63,24 @@ bool debug_mode;
 // global logger
 ConsoleLog& logg = *ConsoleLog::getInstance();
 
+int vm_fd, kvm_fd, vcpu_fd;
+kvm_run* kr;
+
+
 // emulated keyboard (frontend)
 keyboard keyb;
+
+//it will contain pointer to IO devices connected to the PCI bus
+//if an element of the array is null means that it's not connected to any device
+
+PCIDevice* connected_PCI_devices[32];
+
+
+// emulated Hard Disk (frontend)
+HardDisk hdd(4);
+// emulated PCI-ATA bridge
+PCI_ATA ata_bridge(&hdd);
+PCI_APIC apic_bridge;
 
 // emulated serial port (frontend)
 serial_port* com1 = nullptr;
@@ -63,6 +90,10 @@ serial_port* com4 = nullptr;
 
 // keyboard backend
 ConsoleInput* console_in;
+
+// PCI 
+
+pci_host* pci = nullptr;
 
 //text mode video memory emulation  
 ConsoleOutput* console_out = nullptr;
@@ -83,6 +114,11 @@ void endIO(int val)
 
 void initIO()
 {
+	logg << "costruttore INIT KVM" << endl;
+	for(uint32_t i=0; i < 32; i++)
+		connected_PCI_devices[i] = nullptr;
+
+
 	// link the emulated keyboard to the console input
 	console_in = ConsoleInput::getInstance();
 	console_in->attachKeyboard(&keyb);
@@ -95,6 +131,12 @@ void initIO()
 	com2 = new serial_port(0x2f8, logg);
 	com3 = new serial_port(0x3e8, logg);
 	com4 = new serial_port(0x2e8, logg);
+	connected_PCI_devices[0] = &ata_bridge;
+	connected_PCI_devices[1] = &apic_bridge;
+
+	pci = new pci_host(connected_PCI_devices);
+
+
 
 	vga.setVMem((uint16_t*)(guest_physical_memory + 0xB8000)); // set text mode video memory offset
 
@@ -109,6 +151,8 @@ void initIO()
 	atexit([](){endIO(0);});
 	signal(SIGINT, endIO);
 }
+
+
 
 
 // function called on HLT vm program to obtain a program result
@@ -202,6 +246,82 @@ void trace_user_program(int vcpu_fd, kvm_run *kr) {
 	logg << "\tpending: " << (unsigned int)events.nmi.pending << endl;
 	logg << "\tmasked: " << (unsigned int)events.nmi.masked << endl;
 	logg << "\tpad: " << (unsigned int)events.nmi.pad << endl;
+}
+
+void trace_ioapic(int vm_fd,uint16_t line_id = 2) {
+	kvm_irqchip kirqchip;
+	kirqchip.chip_id = 2;
+	if(ioctl(vm_fd,KVM_GET_IRQCHIP,&kirqchip) != 0){
+		logg << "KVM_GET_IRQCHIP error: " << strerror(errno) << endl;
+		return;
+	}
+
+	logg << "APIC state dump: " << endl;
+
+	logg << "\tbase_address: "<< kirqchip.chip.ioapic.base_address << endl;
+	logg << "\tioregsel: "<< kirqchip.chip.ioapic.ioregsel << endl;
+	logg << "\tid: "<< kirqchip.chip.ioapic.id << endl;
+	logg << "\tirr: "<< kirqchip.chip.ioapic.irr << endl;
+	logg << "\tpad: "<< kirqchip.chip.ioapic.pad << endl;
+
+	logg << "\tvector: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.vector << endl;
+	logg << "\tdelivery_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.delivery_mode << endl;
+	logg << "\tdest_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.dest_mode << endl;
+	logg << "\tdelivery_status: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.delivery_status << endl;
+	logg << "\tpolarity: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.polarity << endl;
+	logg << "\tremote_irr: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.remote_irr << endl;
+	logg << "\ttrig_mode: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.trig_mode << endl;
+	logg << "\tmask: " << (unsigned int)kirqchip.chip.ioapic.redirtbl[line_id].fields.mask << endl;
+
+	//int line_id = 14;
+	for(int i=0; i<=1; i++) {
+		kirqchip.chip_id = i;
+		if(ioctl(vm_fd,KVM_GET_IRQCHIP,&kirqchip) != 0){
+			logg << "KVM_GET_IRQCHIP error: " << strerror(errno) << endl;
+			return;
+		}
+		logg << "PIC" << i << endl;
+		logg << "\tlast_irr: " << (unsigned int)kirqchip.chip.pic.last_irr << endl;	/* edge detection */
+		logg << "\tirr: " << (unsigned int)kirqchip.chip.pic.irr << endl;		/* interrupt request register */
+		logg << "\timr: " << (unsigned int)kirqchip.chip.pic.imr << endl;		/* interrupt mask register */
+		logg << "\tisr: " << (unsigned int)kirqchip.chip.pic.isr << endl;		/* interrupt service register */
+		logg << "\tpriority_add: " << (unsigned int)kirqchip.chip.pic.priority_add << endl;	/* highest irq priority */
+		logg << "\tirq_base: " << (unsigned int)kirqchip.chip.pic.irq_base << endl;
+		logg << "\tread_reg_select: " << (unsigned int)kirqchip.chip.pic.read_reg_select << endl;
+		logg << "\tpoll: " << (unsigned int)kirqchip.chip.pic.poll << endl;
+		logg << "\tspecial_mask: " << (unsigned int)kirqchip.chip.pic.special_mask << endl;
+		logg << "\tinit_state: " << (unsigned int)kirqchip.chip.pic.init_state << endl;
+		logg << "\tauto_eoi: " << (unsigned int)kirqchip.chip.pic.auto_eoi << endl;
+		logg << "\trotate_on_auto_eoi: " << (unsigned int)kirqchip.chip.pic.rotate_on_auto_eoi << endl;
+		logg << "\tspecial_fully_nested_mode: " << (unsigned int)kirqchip.chip.pic.special_fully_nested_mode << endl;
+		logg << "\tinit4: " << (unsigned int)kirqchip.chip.pic.init4 << endl;		/* true if 4 byte init */
+		logg << "\telcr: " << (unsigned int)kirqchip.chip.pic.elcr << endl;		/* PIIX edge/trigger selection */
+		logg << "\telcr_mask: " << (unsigned int)kirqchip.chip.pic.elcr_mask << endl;
+
+	}
+
+}
+
+void set_IRQline(uint16_t irq_id,uint16_t level){
+	kvm_irq_level kvm_irq;
+	logg << "STAMPA PRIMA INIEZIONE" << endl;
+	trace_ioapic(vm_fd,irq_id);
+
+	kvm_irq.irq = irq_id;
+	kvm_irq.level = level;
+
+	if(ioctl(vm_fd,KVM_IRQ_LINE,&kvm_irq) != 0){
+		logg << "interrupt has not been injected. Error: " << strerror(errno) << endl;
+		return;
+	}
+	else
+	{
+		logg << "interrupt has been injected" << endl;
+	}
+
+	//trace_user_program(vcpu_fd, kr);
+	logg << "STAMPA DOPO INIEZIONE con livello: " << (unsigned int)level <<  endl;
+	trace_ioapic(vm_fd,kvm_irq.irq);
 }
 
 void dump_memory(uint64_t offset, int size)
@@ -402,12 +522,13 @@ int main(int argc, char **argv)
 	/* the first thing to do is to open the /dev/kvm pseudo-device,
 	 * obtaining a file descriptor.
 	 */
-	int kvm_fd = open("/dev/kvm", O_RDWR);
+	kvm_fd = open("/dev/kvm", O_RDWR);
 	if (kvm_fd < 0) {
 		/* as usual, a negative value means error */
 		cout << "/dev/kvm: " << strerror(errno) << endl;
 		return 4;
 	}
+
 
 	/* we interact with our kvm_fd file descriptor using ioctl()s.
 	 * There are several of them, but the most important here is the
@@ -415,11 +536,15 @@ int main(int argc, char **argv)
 	 * The ioctl() returns us a new file descriptor, which
 	 * we can then use to interact with the vm.
 	 */
-	int vm_fd = ioctl(kvm_fd, KVM_CREATE_VM, 0);
+	vm_fd = ioctl(kvm_fd, KVM_CREATE_VM, 0);
 	if (vm_fd < 0) {
 		cout << "create vm: " << strerror(errno) << endl;
 		return 5;
 	}
+
+
+	int test = ioctl(kvm_fd,KVM_CHECK_EXTENSION, KVM_CAP_IRQCHIP);
+	logg << "checking if is supported KVM_CAP_IRQCHIP [0 unsupported, >0  supported, -1 err]: " << test << endl;
 
 	/* initially, the vm has no resources: no memory, no cpus.
 	 * Here we add the (guest) physical memory, using the
@@ -454,9 +579,17 @@ int main(int argc, char **argv)
 
 	/* now we can add the memory to the vm */
 	if (ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &mrd) < 0) {
-		cout << "set memory (guest_physical_memory): " << strerror(errno) << endl;
+		logg << "set memory (guest_physical_memory): " << strerror(errno) << endl;
 		return 1;
 	}
+
+	// FLM ***** crete IO-APIC
+	if(ioctl(vm_fd,KVM_CREATE_IRQCHIP) < 0){
+		logg << "IRQCHIP has not been created: " << strerror(errno) << endl;
+		return 1;
+	}else
+		logg << "IRQCHIP has been created"<<endl;
+
 
 	// load elf file
 	uint64_t entry_point = estrai_segmento(elf_file_path, (void*)guest_physical_memory, GUEST_PHYSICAL_MEMORY_SIZE);
@@ -466,11 +599,43 @@ int main(int argc, char **argv)
 	 * interact with the vcpu. Note that we can have several
 	 * vcpus, to emulate a multi-processor machine.
 	 */
-	int vcpu_fd = ioctl(vm_fd, KVM_CREATE_VCPU, 0);
+	vcpu_fd = ioctl(vm_fd, KVM_CREATE_VCPU, 0);
 	if (vcpu_fd < 0) {
 		cout << "create vcpu: " << strerror(errno) << endl;
 		return 1;
 	}
+
+	/*int test1 = ioctl(vcpu_fd,KVM_INTERRUPT,)
+	if (test1< 0) {
+		logg << "test1: " << strerror(errno) << endl;
+		return 1;
+	}else
+		logg << "test1:  OK"<<endl;*/
+
+	kvm_irqchip irqchip;
+	irqchip.chip_id = 2;
+	if(ioctl(vm_fd,KVM_GET_IRQCHIP,&irqchip) != 0){
+		logg << "error in KVM_GET_IRQCHIP " << strerror(errno) << endl;
+		return 1;
+	}
+
+	logg << "base address io apic: " << std::hex << irqchip.chip.ioapic.base_address << endl;	
+	logg << "ioregsel address io apic: " << std::hex << irqchip.pad << endl;	
+
+	//logg << "base address io apic: " << irqchip.chip_id << endl;	
+
+
+	logg << "Set klapic: " << endl;
+
+	struct kvm_lapic_state klapic;
+	memset(&klapic, 0, sizeof(klapic));
+	klapic.regs[0xF1] = 1 ;
+
+	if(ioctl(vcpu_fd, KVM_SET_LAPIC, &klapic)<0){
+		logg << " klapic set error: " << strerror(errno) << endl;
+		return 1;
+	}
+
 
 	// start debug server if enabled
 	if( reader.GetBoolean("debug-server", "enable", false) ) {
@@ -498,7 +663,7 @@ int main(int argc, char **argv)
 	}
 
 	/* and now the mmap() */
-	kvm_run *kr = static_cast<kvm_run *>(mmap(
+			kr = static_cast<kvm_run *>(mmap(
 			/* let the kernel  choose the address */
 			NULL,
 			/* the size we obtained above */
@@ -554,6 +719,8 @@ int main(int argc, char **argv)
 	 * the vm, by issuing another KVM_RUN ioctl().
 	 */
 
+	trace_ioapic(vm_fd);
+
 	bool continue_run = true;
 	while(continue_run)
 	{
@@ -572,7 +739,12 @@ int main(int argc, char **argv)
 			case KVM_EXIT_IO:
 			{
 				// this is a pointer to the memory section which contains the operand to return or read (if there is a input or output operation)
-				uint8_t *io_param = (uint8_t*)kr + kr->io.data_offset;
+				//			uint32_t *new_ptr = reinterpret_cast<uint32_t*>(ptr);
+
+				uint8_t *io_param 		= (uint8_t*)kr + kr->io.data_offset;
+				uint16_t *io_param_word = reinterpret_cast<uint16_t*>(io_param);
+				uint32_t *io_param_long = reinterpret_cast<uint32_t*>(io_param);
+
 
 				// ======== Keyboard ========
 				if (kr->io.size == 1 && kr->io.count == 1 && (kr->io.port == 0x60 || kr->io.port == 0x64))
@@ -623,14 +795,53 @@ int main(int argc, char **argv)
 							*io_param = com4->read_reg_byte(kr->io.port);
 				}
 				// ======== Controller PCI Registers ========
-				else if(kr->io.port == 0xcfc || kr->io.port == 0xcf8)
+				else if((kr->io.port >= 0xcfc && kr->io.port <= 0xcff) || kr->io.port == 0xcf8)			//offset
 				{
+
+					if(kr->io.direction == KVM_EXIT_IO_OUT){
+						if(kr->io.size == 1)
+							pci->write_reg_byte(kr->io.port, *io_param);
+						else if(kr->io.size == 2)
+							pci->write_reg_word(kr->io.port, *io_param_word);
+						else if(kr->io.size == 4)
+							pci->write_reg_long(kr->io.port, *io_param_long);
+					}
+					else if(kr->io.direction == KVM_EXIT_IO_IN){
+
+						if(kr->io.size == 1)
+							*io_param = pci->read_reg_byte(kr->io.port);
+						else if(kr->io.size == 2)
+							*io_param_word = pci->read_reg_word(kr->io.port);
+						else if(kr->io.size == 4)
+							*io_param_long = pci->read_reg_long(kr->io.port);
+					}
 					// target programs iterate on bus pci devices and slow down the execution of the program so we skip those warnings
+				}				
+				//	================= Hard Disk ( with PCI ) ================
+				else if(kr->io.port >= connected_PCI_devices[0]->getBar(0) && kr->io.port <= connected_PCI_devices[0]->getBar(0)+7){
+					if(kr->io.size == 2 && kr->io.count == 1){
+						if(kr->io.direction == KVM_EXIT_IO_OUT)
+							connected_PCI_devices[0]->write_reg_word(kr->io.port, *io_param_word);
+						else if(kr->io.direction == KVM_EXIT_IO_IN)
+							*io_param_word = connected_PCI_devices[0]->read_reg_word(kr->io.port);
+					} else if(kr->io.size == 1 && kr->io.count == 1){
+							if(kr->io.direction == KVM_EXIT_IO_OUT)
+							connected_PCI_devices[0]->write_reg_byte(kr->io.port, *io_param);
+						else if(kr->io.direction == KVM_EXIT_IO_IN)
+							*io_param = connected_PCI_devices[0]->read_reg_byte(kr->io.port);
+					}
+				} else if(kr->io.port >= connected_PCI_devices[0]->getBar(1) && kr->io.port <= connected_PCI_devices[0]->getBar(1)+1){
+
+					if(kr->io.direction == KVM_EXIT_IO_OUT)
+							connected_PCI_devices[0]->write_reg_byte(kr->io.port, *io_param);
+					else if(kr->io.direction == KVM_EXIT_IO_IN)
+							*io_param = connected_PCI_devices[0]->read_reg_byte(kr->io.port);
 				}
 				else
 				{
 					logg << "kvm: Unhandled VM IO: " <<  ((kr->io.direction == KVM_EXIT_IO_IN)?"IN":"OUT")
 						<< " on kr->io.port " << std::hex << (unsigned int)kr->io.port << endl;
+
 					break;
 				}
 				break;

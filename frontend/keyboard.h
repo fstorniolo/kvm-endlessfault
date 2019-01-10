@@ -2,11 +2,14 @@
 #define KEYBOARD_H
 
 #define INTERNAL_BUFFER_SIZE 16
+#define INT_KEYBOARD 1
 
 #include "IODevice.h"
 #include <stdint.h>
 #include <pthread.h>
 #include "../backend/ConsoleLog.h"
+#include "../kvm.h"
+
 
 // logger globale
 extern ConsoleLog& logg;
@@ -53,7 +56,7 @@ private:
 
 	// questo metodo è chiamato per aggiornare FI in base allo stato
 	// del buffer (vuoto/non vuoto)
-	void update_FI();
+	void update_FI(bool insert);
 
 public:
 	keyboard();

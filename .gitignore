@@ -3,4 +3,5 @@
 kvm
 debug-client/debug_client
 build/
+*.bin
 *.log
