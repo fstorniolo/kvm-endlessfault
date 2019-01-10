@@ -12,8 +12,9 @@
 #include "frontend/IODevice.h"
 #include "frontend/PCIDevice.h"
 
-#include "frontend/HardDisk.h"
 #include "frontend/PCI_ATA.h"
+#include "frontend/HardDisk.h"
+
 #include "frontend/PCI_APIC.h"
 #include "frontend/keyboard.h"
 #include "frontend/serial_port.h"

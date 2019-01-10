@@ -6,6 +6,7 @@
 #include "../backend/DiskManager.h"
 #include "../backend/ConsoleLog.h"
 #include "../kvm.h"
+#include "PCI_ATA.h"
 
 extern ConsoleLog& logg;
 
@@ -60,6 +61,8 @@ private:
 
 	bool interrupt_raised;
 	bool DMA;
+
+	//PCI_ATA *ptr;
 
 
 private:

@@ -148,10 +148,12 @@ void HardDisk::process_cmd(){
 			break;
 
 		case 0xC8:			//read DMA
+			logg<<"READ DMA"<<endl;
+
 			STS |= DRQ_MASK;
 			STS &= ~BUSY_MASK;
 			DMA = true;
-			read_from_backend();
+			//read_from_backend();
 			break;
 
 		case 0xCA:			// write DMA

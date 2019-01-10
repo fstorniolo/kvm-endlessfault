@@ -203,6 +203,8 @@ void PCI_ATA::setVmem(uint8_t* addr){
 
 void PCI_ATA::sendInterrupt(uint16_t irq, uint16_t level){
 
+	logg<<"effess uaglio"<<endl;
+
 	//set_IRQline(irq,level);
 
 }
