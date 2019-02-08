@@ -5,8 +5,7 @@
 using namespace std;
 
 pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected(0){
-	//test connection between two modules
-	//connected = 0;
+
 	uint32_t i;
 
 	for(i=0;i<N_DEVICES;i++)
@@ -16,13 +15,11 @@ pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected
 		if(connected_PCI_devices[i] == nullptr)
 			continue;
 
-
-		devices[connected] = connected_PCI_devices[i];
-		connected++;
+		devices[connected++] = connected_PCI_devices[i];
 	}
 
 	
-	//After implementation move this code in kvm.cpp after constructor of PCI Host
+	//Initializing BAR registers
 
 	for(i=0;i<connected;i++){
 		if(devices[i]->getClassCode() == 0x010100){				//PCI-ATA
@@ -39,6 +36,12 @@ pci_host::pci_host(PCIDevice** connected_PCI_devices) : CAP(0), CDP(0),connected
 	}
 
 }
+
+/*
+
+	All the following functions are necessary to read/write inside the Configuration Space of each PCI Function of every device
+
+*/
 
 void pci_host::write_reg_long(io_addr addr, uint32_t val)
 {
@@ -59,15 +62,6 @@ void pci_host::write_reg_long(io_addr addr, uint32_t val)
 	tmp->write_reg_long_PCI(offset_number + addr-CDP_addr,val);
 
 
-/*	switch(addr) {
-		case CAP_addr: 
-			CAP=val; 
-			prepare_data(); 
-			break;
-
-		case CDP_addr: break;			//TODO
-	}*/
-
 }
 
 void pci_host::write_reg_word(io_addr addr, uint16_t val)
@@ -86,10 +80,6 @@ void pci_host::write_reg_word(io_addr addr, uint16_t val)
 
 	tmp->write_reg_word_PCI(offset_number + addr-CDP_addr,val);
 
-	/*switch(addr) {
-		case CAP_addr: break;
-		case CDP_addr: break;			//TODO
-	}*/
 
 }
 
@@ -170,7 +160,7 @@ uint16_t pci_host::read_reg_word(io_addr addr){
 
 }
 
-
+//This function retrives bus number, device number, function number and offset from CAP
 
 void pci_host::prepare_data(){
 

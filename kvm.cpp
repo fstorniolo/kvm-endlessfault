@@ -60,6 +60,8 @@ unsigned char *guest_physical_memory = NULL;
 // flag to check kvm debug mode
 bool debug_mode;
 
+
+
 // global logger
 ConsoleLog& logg = *ConsoleLog::getInstance();
 
@@ -248,7 +250,11 @@ void trace_user_program(int vcpu_fd, kvm_run *kr) {
 	logg << "\tpad: " << (unsigned int)events.nmi.pad << endl;
 }
 
-void trace_ioapic(int vm_fd,uint16_t line_id = 2) {
+
+//This function is usefull for debug mode of IOAPIC and PICs
+//It prints information about IO APIC/PICs, like baseaddress or ioregsel, but also, most important, information about the triggered line
+ 
+void trace_ioapic(int vm_fd,uint16_t line_id) {
 	kvm_irqchip kirqchip;
 	kirqchip.chip_id = 2;
 	if(ioctl(vm_fd,KVM_GET_IRQCHIP,&kirqchip) != 0){
@@ -302,10 +308,17 @@ void trace_ioapic(int vm_fd,uint16_t line_id = 2) {
 
 }
 
+
+//This function is fondamental because it triggers the line of the io apic/pic into the target machine
+//Note that we have to specify a level (0 or 1). With the emulation of IO APIC by KVM we do not have to worry about knowing if the signal 
+//has to be actie low or active high. In fact, in this case, 1 will "activate" the line irq_id, while 0 will "disactivate" the line irq_id
+//So when we need to send an interrupt from a device, for example from the hard disk, we call set_IRQline with irq_id = 14 and level = 1
+
 void set_IRQline(uint16_t irq_id,uint16_t level){
 	kvm_irq_level kvm_irq;
-	logg << "STAMPA PRIMA INIEZIONE" << endl;
-	trace_ioapic(vm_fd,irq_id);
+
+	//logg << "PRINT BEFORE INJECTION" << endl;
+	//trace_ioapic(vm_fd,irq_id);
 
 	kvm_irq.irq = irq_id;
 	kvm_irq.level = level;
@@ -320,8 +333,10 @@ void set_IRQline(uint16_t irq_id,uint16_t level){
 	}
 
 	//trace_user_program(vcpu_fd, kr);
-	logg << "STAMPA DOPO INIEZIONE con livello: " << (unsigned int)level <<  endl;
-	trace_ioapic(vm_fd,kvm_irq.irq);
+	
+	//For Debug purposes
+	//logg << "PRINT AFTER INJECTION with level: " << (unsigned int)level <<  endl;
+	//trace_ioapic(vm_fd,kvm_irq.irq);
 }
 
 void dump_memory(uint64_t offset, int size)
@@ -605,12 +620,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	/*int test1 = ioctl(vcpu_fd,KVM_INTERRUPT,)
-	if (test1< 0) {
-		logg << "test1: " << strerror(errno) << endl;
-		return 1;
-	}else
-		logg << "test1:  OK"<<endl;*/
+
+	/*This function is needed to create both of IO APIC and PICs by kvm
+	*Note that it is also possible emulating the devices by yourself, but with this solution we use the emulation of those devices by kvm*/
 
 	kvm_irqchip irqchip;
 	irqchip.chip_id = 2;
@@ -627,6 +639,7 @@ int main(int argc, char **argv)
 
 	logg << "Set klapic: " << endl;
 
+	//This function is needed to activate the local APIC, without this initialization interrupt won't work 
 	struct kvm_lapic_state klapic;
 	memset(&klapic, 0, sizeof(klapic));
 	klapic.regs[0xF1] = 1 ;
@@ -719,7 +732,7 @@ int main(int argc, char **argv)
 	 * the vm, by issuing another KVM_RUN ioctl().
 	 */
 
-	trace_ioapic(vm_fd);
+	//trace_ioapic(vm_fd);
 
 	bool continue_run = true;
 	while(continue_run)
@@ -818,6 +831,8 @@ int main(int argc, char **argv)
 					// target programs iterate on bus pci devices and slow down the execution of the program so we skip those warnings
 				}				
 				//	================= Hard Disk ( with PCI ) ================
+				// This Device is connected trough the bus PCI and its register's addresses are inside BAR
+
 				else if(kr->io.port >= connected_PCI_devices[0]->getBar(0) && kr->io.port <= connected_PCI_devices[0]->getBar(0)+7){
 					if(kr->io.size == 2 && kr->io.count == 1){
 						if(kr->io.direction == KVM_EXIT_IO_OUT)

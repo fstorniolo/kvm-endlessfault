@@ -7,6 +7,8 @@
 
 extern ConsoleLog& logg;
 
+//PCI Configuration Space
+
 struct deviceRegisters{
 	uint16_t vendorID;
 	uint16_t deviceID;

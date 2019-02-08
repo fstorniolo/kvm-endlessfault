@@ -173,11 +173,10 @@ void HardDisk::read_from_backend(){
 void HardDisk::write_BR_register(uint16_t val){
 	BR = val;
 	STS |= BUSY_MASK;
-	logg << "writing in BR register current_position: " << current_position << endl;
+	//logg << "writing in BR register current_position: " << current_position << endl;
 	internal_buffer[current_position++] = (val & 0x00FF);
 	internal_buffer[current_position++] = val >> 8;
 	if(current_position >= 511){
-		//call backend function sending (lba + current_sector_number++) as parameter
 		current_position = 0;
 		disk_manager.write(internal_buffer,lba + current_sector_number++);
 
@@ -188,7 +187,6 @@ void HardDisk::write_BR_register(uint16_t val){
 		if(sector_numbers_cmd == current_sector_number){
 			//clean status register 
 			STS &= ~(DRQ_MASK);
-		//	return;
 		} 
 		if(interrupt_enabled){
 			set_IRQline(INT_IDE_HDD,1);
@@ -201,7 +199,6 @@ void HardDisk::write_BR_register(uint16_t val){
 uint16_t HardDisk::read_BR_register(){
 
 	STS |= BUSY_MASK;
-	//uint16_t *new_buffer;
 	int log_position = current_position;
 	if(current_position == 0){
 		new_buffer = reinterpret_cast<uint16_t*>(&internal_buffer[0]);
@@ -209,15 +206,11 @@ uint16_t HardDisk::read_BR_register(){
 
 	BR = new_buffer[current_position++];
 
-	//logg << "print BR: " << BR << endl;
-	//logg << "current_position: " << current_position << endl;
 	if(current_position >= (BLOCK_SIZE_BYTE/2)){
 		//clean status register 
 		STS &= ~BUSY_MASK;
 		STS |= DRQ_MASK;
 		current_position = 0;
-		//disk_manager.read(internal_buffer,lba + current_sector_number++);
-
 		if(sector_numbers_cmd == current_sector_number){
 			STS &= ~(DRQ_MASK);	
 		}
@@ -225,8 +218,6 @@ uint16_t HardDisk::read_BR_register(){
 			read_from_backend();
 		}
 	}
-		logg << "reading in BR with current_position: " << log_position << endl;
-
 	return BR;
 }
 

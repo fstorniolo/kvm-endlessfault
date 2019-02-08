@@ -8,7 +8,7 @@ PCI_ATA::PCI_ATA(HardDisk *hdd_instance): PCIDevice(ATA_VENDOR_ID, ATA_DEVICE_ID
 	hdd = hdd_instance;
 };
 
-//Since Register as mapped wherever the target chooses, i convert them to normal ATA addresses
+//Since Register are mapped wherever the target chooses, i convert them to normal ATA addresses
 
 void PCI_ATA::write_reg_word(io_addr addr, uint16_t val){
 	io_addr bar0,bar1;
