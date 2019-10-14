@@ -32,7 +32,7 @@ There are also some precompiled and more complex examples in esempi-io/ folder
 Other parameters can be set into the main folder .ini file.
 
 ### IO Emulation ###
-Actually there are only a few emulated devices: video card (text-mode only), keyboard and serial ports. The emulation is very basic.
+Actually there are only a few emulated devices: video card (text-mode only), keyboard, serial ports, Hard-Disk, PCI Host, PCI ATA Bridge. Keyboard and Hard-Disk are also able to work with interrupts. APIC is emulated by KVM API. 
 
 ### GDB Server ###
 This supervisor includes an almost complete implementation of a gdbstub.
@@ -58,7 +58,10 @@ to get the content of some low level registers (not listed with the standard reg
 This project is developed by\
 Antonio Le Caldare (kvm skeleton code, gdbstub, keyboard emulation, elf execution)\
 Vincent Della Corte (video card text-mode emulation, code polish, comment review)\
-Vincenzo Consales (elf loader, bootloader code, custom memory debug server)
+Vincenzo Consales (elf loader, bootloader code, custom memory debug server)\
+Luigi Leonardi (PCI-ATA Bridge, PCI Host, integrated interrupts in keyboard)\
+Filippo Storniolo (emulated Hard-Disk interface, APIC and interrupts integration)\
+Matteo Suffredini (physical Hard-Disk)
 
 as a project for Virtualization university course (prof. [@giuseppelettieri]( https://github.com/giuseppelettieri )).
 
